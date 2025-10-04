@@ -1,12 +1,20 @@
 // main.js - The heart of the Electron App (Main Process)
 
-const { app, BrowserWindow, Tray, Menu, ipcMain } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, safeStorage, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const keytar = require('keytar');
 
 let tray = null;
 let mainWindow = null;
+let activationWindow = null;
+let apiKeyWindow = null;
 let currentPnl = 0;
+
+// Credentials configuration
+const SERVICE_NAME = 'CortexAlgo';
+const REFRESH_TOKEN_ACCOUNT = 'refresh_token';
+const API_KEY_FILE = path.join(app.getPath('userData'), 'api_key.enc');
 
 // Application State Management
 const APP_STATES = {
@@ -18,6 +26,87 @@ const APP_STATES = {
 };
 
 let currentState = APP_STATES.CONNECTING;
+
+// ========== Secure Credential Storage ==========
+
+// Store refresh token in OS keychain
+async function storeRefreshToken(token) {
+  try {
+    await keytar.setPassword(SERVICE_NAME, REFRESH_TOKEN_ACCOUNT, token);
+    return true;
+  } catch (error) {
+    console.error('Failed to store refresh token:', error);
+    return false;
+  }
+}
+
+// Retrieve refresh token from OS keychain
+async function getRefreshToken() {
+  try {
+    return await keytar.getPassword(SERVICE_NAME, REFRESH_TOKEN_ACCOUNT);
+  } catch (error) {
+    console.error('Failed to get refresh token:', error);
+    return null;
+  }
+}
+
+// Delete refresh token from OS keychain
+async function deleteRefreshToken() {
+  try {
+    return await keytar.deletePassword(SERVICE_NAME, REFRESH_TOKEN_ACCOUNT);
+  } catch (error) {
+    console.error('Failed to delete refresh token:', error);
+    return false;
+  }
+}
+
+// Store API key using electron.safeStorage (encrypted)
+function storeApiKey(apiKey) {
+  try {
+    const encrypted = safeStorage.encryptString(apiKey);
+    fs.writeFileSync(API_KEY_FILE, encrypted);
+    return true;
+  } catch (error) {
+    console.error('Failed to store API key:', error);
+    return false;
+  }
+}
+
+// Retrieve API key using electron.safeStorage (decrypted)
+function getApiKey() {
+  try {
+    if (!fs.existsSync(API_KEY_FILE)) {
+      return null;
+    }
+    const encrypted = fs.readFileSync(API_KEY_FILE);
+    return safeStorage.decryptString(encrypted);
+  } catch (error) {
+    console.error('Failed to get API key:', error);
+    return null;
+  }
+}
+
+// Delete stored API key
+function deleteApiKey() {
+  try {
+    if (fs.existsSync(API_KEY_FILE)) {
+      fs.unlinkSync(API_KEY_FILE);
+    }
+    return true;
+  } catch (error) {
+    console.error('Failed to delete API key:', error);
+    return false;
+  }
+}
+
+// Check if user has completed activation
+async function isActivated() {
+  const refreshToken = await getRefreshToken();
+  const apiKey = getApiKey();
+  return refreshToken !== null && apiKey !== null;
+}
+
+// ========== Window Creation Functions ==========
 
 // This function creates the main dashboard window.
 function createMainWindow() {
@@ -47,6 +136,58 @@ function createMainWindow() {
     } else {
       event.preventDefault();
       mainWindow.hide();
+    }
+  });
+}
+
+// This function creates the activation window
+function createActivationWindow() {
+  activationWindow = new BrowserWindow({
+    width: 540,
+    height: 620,
+    title: 'Activate CortexAlgo',
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+  });
+
+  activationWindow.loadFile('public/activation.html');
+
+  // Prevent closing - user must complete activation
+  activationWindow.on('close', (event) => {
+    if (!app.quitting) {
+      event.preventDefault();
+    }
+  });
+}
+
+// This function creates the API key window
+function createApiKeyWindow() {
+  apiKeyWindow = new BrowserWindow({
+    width: 540,
+    height: 680,
+    title: 'Connect TopstepX Account',
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+  });
+
+  apiKeyWindow.loadFile('public/api-key.html');
+
+  // Prevent closing - user must complete setup
+  apiKeyWindow.on('close', (event) => {
+    if (!app.quitting) {
+      event.preventDefault();
     }
   });
 }
@@ -168,7 +309,9 @@ function buildTrayMenu() {
     });
     menuTemplate.push({
       label: 'Change TopstepX API Key...',
-      enabled: false  // Placeholder for future implementation
+      click: () => {
+        createApiKeyWindow();
+      }
     });
   }
 
@@ -292,10 +435,20 @@ function startMockCloudFeed() {
 
 
 // --- Electron App Lifecycle ---
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   createTray();
-  createMainWindow();
-  startMockCloudFeed(); // Start our simulator
+
+  // Check if user has completed activation
+  const activated = await isActivated();
+
+  if (!activated) {
+    // First run - show activation window
+    createActivationWindow();
+  } else {
+    // User is activated - show main window and start
+    createMainWindow();
+    startMockCloudFeed();
+  }
 
   // This is for macOS behavior
   app.on('activate', () => {
@@ -330,4 +483,79 @@ ipcMain.handle('get-app-state', async () => {
     state: currentState,
     pnl: currentPnl
   };
+});
+
+// Handle activation token submission
+ipcMain.handle('activate-with-token', async (event, token) => {
+  try {
+    // Mock validation: Accept any token starting with 'act_'
+    if (!token.startsWith('act_')) {
+      return { success: false, error: 'Invalid activation token format' };
+    }
+
+    // In production, this would make an API call to validate the token
+    // For now, simulate a successful activation
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
+
+    // Generate a mock refresh token
+    const refreshToken = `refresh_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Store refresh token in OS keychain
+    const stored = await storeRefreshToken(refreshToken);
+
+    if (!stored) {
+      return { success: false, error: 'Failed to store credentials securely' };
+    }
+
+    // Close activation window and show API key window
+    if (activationWindow) {
+      activationWindow.destroy();
+      activationWindow = null;
+    }
+
+    createApiKeyWindow();
+
+    return { success: true };
+  } catch (error) {
+    console.error('Activation error:', error);
+    return { success: false, error: 'An unexpected error occurred' };
+  }
+});
+
+// Handle API key submission
+ipcMain.handle('save-api-key', async (event, apiKey) => {
+  try {
+    if (!apiKey || apiKey.length < 10) {
+      return { success: false, error: 'API key appears to be invalid' };
+    }
+
+    // Store API key using electron.safeStorage
+    const stored = storeApiKey(apiKey);
+
+    if (!stored) {
+      return { success: false, error: 'Failed to store API key securely' };
+    }
+
+    // Close API key window
+    if (apiKeyWindow) {
+      apiKeyWindow.destroy();
+      apiKeyWindow = null;
+    }
+
+    // Only create main window if it doesn't exist (first-time setup)
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      createMainWindow();
+      startMockCloudFeed();
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('API key save error:', error);
+    return { success: false, error: 'An unexpected error occurred' };
+  }
+});
+
+// Handle external link opening
+ipcMain.handle('open-external', async (event, url) => {
+  shell.openExternal(url);
 });

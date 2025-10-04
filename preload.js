@@ -31,4 +31,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getAppState: () => ipcRenderer.invoke('get-app-state'),
   getCurrentPnl: () => ipcRenderer.invoke('get-current-pnl'),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+
+  // Activation flow
+  activateWithToken: (token) => ipcRenderer.invoke('activate-with-token', token),
+  saveApiKey: (apiKey) => ipcRenderer.invoke('save-api-key', apiKey),
+  openExternal: (url) => ipcRenderer.invoke('open-external', url),
 });
