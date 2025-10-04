@@ -7,6 +7,25 @@ function App() {
   const [lastDirective, setLastDirective] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState('Connected (Mock)');
   const [lastUpdate, setLastUpdate] = useState(new Date());
+  const [theme, setTheme] = useState('light');
+
+  // Detect OS color scheme preference
+  useEffect(() => {
+    const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+    // Set initial theme based on OS preference
+    setTheme(darkModeQuery.matches ? 'dark' : 'light');
+
+    // Listen for theme changes
+    const handleThemeChange = (e) => {
+      setTheme(e.matches ? 'dark' : 'light');
+    };
+
+    darkModeQuery.addEventListener('change', handleThemeChange);
+
+    // Cleanup listener on unmount
+    return () => darkModeQuery.removeEventListener('change', handleThemeChange);
+  }, []);
 
   useEffect(() => {
     // Set up listeners for events from the Main Process via the secure bridge
@@ -61,7 +80,7 @@ function App() {
   };
 
   return (
-    <div className="dashboard">
+    <div className={`dashboard ${theme}`}>
       <header className="dashboard-header">
         <h1>Execution Agent Dashboard</h1>
         <div className="status-indicator">

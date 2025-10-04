@@ -1,4 +1,4 @@
-/* App.css - Dashboard Styling */
+/* App.css - Apple-Style Dashboard Theming */
 
 * {
   box-sizing: border-box;
@@ -6,19 +6,68 @@
   padding: 0;
 }
 
-.dashboard {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #0a0e27 0%, #1a1e3f 100%);
-  color: #ffffff;
-  display: flex;
-  flex-direction: column;
+/* ========== Light Theme (Default) ========== */
+.dashboard.light {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f7;
+  --bg-tertiary: #e8e8ed;
+  --text-primary: #1d1d1f;
+  --text-secondary: #6e6e73;
+  --text-tertiary: #86868b;
+  --border-color: #d2d2d7;
+  --card-bg: #ffffff;
+  --card-border: #d2d2d7;
+  --shadow: rgba(0, 0, 0, 0.1);
+  --header-bg: rgba(255, 255, 255, 0.8);
+  --footer-bg: #f5f5f7;
 }
 
-/* Header */
+/* ========== Dark Theme ========== */
+.dashboard.dark {
+  --bg-primary: #000000;
+  --bg-secondary: #1d1d1f;
+  --bg-tertiary: #2c2c2e;
+  --text-primary: #f5f5f7;
+  --text-secondary: #98989d;
+  --text-tertiary: #636366;
+  --border-color: #38383a;
+  --card-bg: #1d1d1f;
+  --card-border: #38383a;
+  --shadow: rgba(0, 0, 0, 0.3);
+  --header-bg: rgba(29, 29, 31, 0.8);
+  --footer-bg: #1d1d1f;
+}
+
+/* ========== Shared Accent Colors ========== */
+.dashboard {
+  --green: #30d158;
+  --green-bg: rgba(48, 209, 88, 0.15);
+  --green-border: rgba(48, 209, 88, 0.3);
+  --red: #ff453a;
+  --red-bg: rgba(255, 69, 58, 0.15);
+  --red-border: rgba(255, 69, 58, 0.3);
+  --blue: #0a84ff;
+  --gray: #8e8e93;
+  --gray-bg: rgba(142, 142, 147, 0.15);
+  --gray-border: rgba(142, 142, 147, 0.3);
+}
+
+/* ========== Base Dashboard ========== */
+.dashboard {
+  min-height: 100vh;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ========== Header ========== */
 .dashboard-header {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--header-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border-color);
   padding: 1.5rem 2rem;
   display: flex;
   justify-content: space-between;
@@ -28,7 +77,7 @@
 .dashboard-header h1 {
   font-size: 1.75rem;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .status-indicator {
@@ -36,7 +85,7 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.9rem;
-  color: #b0b8c9;
+  color: var(--text-secondary);
 }
 
 .status-dot {
@@ -47,8 +96,8 @@
 }
 
 .status-dot.connected {
-  background: #10b981;
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green-border);
 }
 
 @keyframes pulse {
@@ -56,23 +105,25 @@
   50% { opacity: 0.6; }
 }
 
-/* Content */
+/* ========== Content ========== */
 .dashboard-content {
   flex: 1;
   padding: 2rem;
+  background: var(--bg-secondary);
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-  gap: 2rem;
+  gap: 1.5rem;
   align-content: start;
 }
 
-/* Sections */
+/* ========== Sections (Cards) ========== */
 section {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 12px;
   padding: 1.5rem;
+  box-shadow: 0 1px 3px var(--shadow);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .section-header {
@@ -85,15 +136,15 @@ section {
 .section-header h2 {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .last-update {
   font-size: 0.85rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
 }
 
-/* PNL Section */
+/* ========== PNL Section ========== */
 .pnl-display {
   display: flex;
   gap: 2rem;
@@ -107,10 +158,11 @@ section {
 .pnl-main label,
 .pnl-change label {
   display: block;
-  font-size: 0.85rem;
-  color: #9ca3af;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  font-weight: 600;
   margin-bottom: 0.5rem;
 }
 
@@ -123,25 +175,26 @@ section {
 
 .pnl-value.positive,
 .change-value.positive {
-  color: #10b981;
+  color: var(--green);
 }
 
 .pnl-value.negative,
 .change-value.negative {
-  color: #ef4444;
+  color: var(--red);
 }
 
 .pnl-value.neutral,
 .change-value.neutral {
-  color: #6b7280;
+  color: var(--text-secondary);
 }
 
-/* Directive Section */
+/* ========== Directive Section ========== */
 .directive-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
   padding: 1.5rem;
+  transition: background-color 0.3s ease;
 }
 
 .directive-header {
@@ -150,39 +203,39 @@ section {
   align-items: center;
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .directive-action {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: 700;
   padding: 0.5rem 1rem;
-  border-radius: 6px;
+  border-radius: 8px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .directive-action.action-long {
-  background: rgba(16, 185, 129, 0.2);
-  color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.4);
+  background: var(--green-bg);
+  color: var(--green);
+  border: 1px solid var(--green-border);
 }
 
 .directive-action.action-short {
-  background: rgba(239, 68, 68, 0.2);
-  color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.4);
+  background: var(--red-bg);
+  color: var(--red);
+  border: 1px solid var(--red-border);
 }
 
 .directive-action.action-neutral {
-  background: rgba(107, 114, 128, 0.2);
-  color: #9ca3af;
-  border: 1px solid rgba(107, 114, 128, 0.4);
+  background: var(--gray-bg);
+  color: var(--gray);
+  border: 1px solid var(--gray-border);
 }
 
 .directive-time {
-  font-size: 0.9rem;
-  color: #6b7280;
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
 }
 
 .directive-details {
@@ -202,42 +255,44 @@ section {
 }
 
 .detail-item label {
-  font-size: 0.75rem;
-  color: #9ca3af;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  font-weight: 600;
 }
 
 .detail-item span {
   font-size: 1rem;
-  color: #ffffff;
+  color: var(--text-primary);
   font-weight: 500;
 }
 
 .detail-item .instrument {
-  color: #60a5fa;
+  color: var(--blue);
   font-weight: 700;
 }
 
 .no-directive {
   text-align: center;
   padding: 3rem 1rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
 }
 
-/* Info Section */
+/* ========== Info Section ========== */
 .info-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
   padding: 1.5rem;
+  transition: background-color 0.3s ease;
 }
 
 .info-card h3 {
   font-size: 1.1rem;
   font-weight: 600;
   margin-bottom: 1rem;
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .info-grid {
@@ -253,45 +308,46 @@ section {
 }
 
 .info-item label {
-  font-size: 0.75rem;
-  color: #9ca3af;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  font-weight: 600;
 }
 
 .status-badge {
   display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 4px;
-  font-size: 0.85rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
   font-weight: 600;
   text-align: center;
 }
 
 .status-badge.connected {
-  background: rgba(16, 185, 129, 0.2);
-  color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.4);
+  background: var(--green-bg);
+  color: var(--green);
+  border: 1px solid var(--green-border);
 }
 
 .status-badge.neutral {
-  background: rgba(107, 114, 128, 0.2);
-  color: #9ca3af;
-  border: 1px solid rgba(107, 114, 128, 0.4);
+  background: var(--gray-bg);
+  color: var(--gray);
+  border: 1px solid var(--gray-border);
 }
 
-/* Footer */
+/* ========== Footer ========== */
 .dashboard-footer {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--footer-bg);
+  border-top: 1px solid var(--border-color);
   padding: 1rem 2rem;
   text-align: center;
-  color: #6b7280;
+  color: var(--text-tertiary);
   font-size: 0.85rem;
+  transition: background-color 0.3s ease;
 }
 
-/* Responsive Design */
+/* ========== Responsive Design ========== */
 @media (max-width: 768px) {
   .dashboard-content {
     grid-template-columns: 1fr;
