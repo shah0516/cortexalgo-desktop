@@ -1,7 +1,7 @@
 {
   "name": "execution-agent-desktop",
   "version": "1.0.0",
-  "description": "Desktop Execution Agent for Cloud-Hybrid Trading Platform",
+  "description": "CortexAlgo Desktop - Cloud-Hybrid Trading Platform",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -27,8 +27,8 @@
     "electron-builder": "^24.9.1"
   },
   "build": {
-    "appId": "com.tradingplatform.executionagent",
-    "productName": "Execution Agent",
+    "appId": "com.cortexalgo.desktop",
+    "productName": "CortexAlgo",
     "directories": {
       "output": "dist"
     },

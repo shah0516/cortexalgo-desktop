@@ -82,7 +82,7 @@ function App() {
   return (
     <div className={`dashboard ${theme}`}>
       <header className="dashboard-header">
-        <h1>Execution Agent Dashboard</h1>
+        <h1>CortexAlgo Dashboard</h1>
         <div className="status-indicator">
           <span className="status-dot connected"></span>
           <span>{connectionStatus}</span>
@@ -184,7 +184,7 @@ function App() {
       </div>
 
       <footer className="dashboard-footer">
-        <p>Execution Agent v1.0.0 | Trading Platform</p>
+        <p>CortexAlgo v1.0.0 | Trading Platform</p>
       </footer>
     </div>
   );

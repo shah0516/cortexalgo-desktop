@@ -1,6 +1,6 @@
-# Execution Agent Desktop
+# CortexAlgo Desktop
 
-Desktop application for the Cloud-Hybrid automated trading platform. This app acts as the secure "Execution Agent" - the local component that receives trade directives from the cloud engine and executes them via trading APIs.
+Desktop application for the Cloud-Hybrid automated trading platform. CortexAlgo acts as the secure execution agent - the local component that receives trade directives from the cloud engine and executes them via trading APIs.
 
 ## Features
 

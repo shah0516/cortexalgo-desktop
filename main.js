@@ -12,7 +12,7 @@ function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    title: 'Execution Agent Dashboard',
+    title: 'CortexAlgo Dashboard',
     webPreferences: {
       // The preload script is the secure bridge between this Node.js process
       // and the React UI running in the browser window.
@@ -68,7 +68,7 @@ function updateTrayMenu() {
 // This function creates the System Tray icon and its menu.
 function createTray() {
   tray = new Tray('assets/tray-icon.png'); // 32x32 icon optimized for system tray
-  tray.setToolTip('Trading Bot - Connected');
+  tray.setToolTip('CortexAlgo - Connected');
   updateTrayMenu();
 
   // Double-click tray icon to show dashboard
