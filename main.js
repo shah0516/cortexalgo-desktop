@@ -3,6 +3,7 @@
 const { app, BrowserWindow, Tray, Menu, ipcMain, safeStorage, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const topstepClient = require('./services/topstepClient');
 const keytar = require('keytar');
 
 let tray = null;
@@ -10,11 +11,13 @@ let mainWindow = null;
 let activationWindow = null;
 let apiKeyWindow = null;
 let currentPnl = 0;
+let topstepAccounts = [];
+let isTopstepInitialized = false;
 
 // Credentials configuration
 const SERVICE_NAME = 'CortexAlgo';
 const REFRESH_TOKEN_ACCOUNT = 'refresh_token';
-const API_KEY_FILE = path.join(app.getPath('userData'), 'api_key.enc');
+const CREDENTIALS_FILE = path.join(app.getPath('userData'), 'topstepx_credentials.enc');
 
 // Application State Management
 const APP_STATES = {
@@ -60,41 +63,43 @@ async function deleteRefreshToken() {
   }
 }
 
-// Store API key using electron.safeStorage (encrypted)
-function storeApiKey(apiKey) {
+// Store TopstepX credentials using electron.safeStorage (encrypted)
+function storeTopstepXCredentials(username, apiKey) {
   try {
-    const encrypted = safeStorage.encryptString(apiKey);
-    fs.writeFileSync(API_KEY_FILE, encrypted);
+    const credentials = JSON.stringify({ username, apiKey });
+    const encrypted = safeStorage.encryptString(credentials);
+    fs.writeFileSync(CREDENTIALS_FILE, encrypted);
     return true;
   } catch (error) {
-    console.error('Failed to store API key:', error);
+    console.error('Failed to store TopstepX credentials:', error);
     return false;
   }
 }
 
-// Retrieve API key using electron.safeStorage (decrypted)
-function getApiKey() {
+// Retrieve TopstepX credentials using electron.safeStorage (decrypted)
+function getTopstepXCredentials() {
   try {
-    if (!fs.existsSync(API_KEY_FILE)) {
+    if (!fs.existsSync(CREDENTIALS_FILE)) {
       return null;
     }
-    const encrypted = fs.readFileSync(API_KEY_FILE);
-    return safeStorage.decryptString(encrypted);
+    const encrypted = fs.readFileSync(CREDENTIALS_FILE);
+    const decrypted = safeStorage.decryptString(encrypted);
+    return JSON.parse(decrypted);
   } catch (error) {
-    console.error('Failed to get API key:', error);
+    console.error('Failed to get TopstepX credentials:', error);
     return null;
   }
 }
 
-// Delete stored API key
-function deleteApiKey() {
+// Delete stored TopstepX credentials
+function deleteTopstepXCredentials() {
   try {
-    if (fs.existsSync(API_KEY_FILE)) {
-      fs.unlinkSync(API_KEY_FILE);
+    if (fs.existsSync(CREDENTIALS_FILE)) {
+      fs.unlinkSync(CREDENTIALS_FILE);
     }
     return true;
   } catch (error) {
-    console.error('Failed to delete API key:', error);
+    console.error('Failed to delete TopstepX credentials:', error);
     return false;
   }
 }
@@ -102,8 +107,8 @@ function deleteApiKey() {
 // Check if user has completed activation
 async function isActivated() {
   const refreshToken = await getRefreshToken();
-  const apiKey = getApiKey();
-  return refreshToken !== null && apiKey !== null;
+  const credentials = getTopstepXCredentials();
+  return refreshToken !== null && credentials !== null && credentials.username && credentials.apiKey;
 }
 
 // ========== Window Creation Functions ==========
@@ -352,6 +357,90 @@ function createTray() {
   });
 }
 
+// --- TOPSTEPX INTEGRATION ---
+// Initialize and connect to TopstepX
+async function initializeTopstepX() {
+  console.log('[Main] Initializing TopstepX...');
+
+  try {
+    // Get stored credentials
+    const credentials = getTopstepXCredentials();
+
+    if (!credentials) {
+      console.error('[Main] No TopstepX credentials found');
+      setState(APP_STATES.WARNING);
+      return false;
+    }
+
+    setState(APP_STATES.CONNECTING);
+
+    // Initialize TopstepX client with callbacks
+    await topstepClient.initialize(credentials, {
+      onAccountsLoaded: (accounts) => {
+        console.log(`[Main] TopstepX accounts loaded: ${accounts.length}`);
+        topstepAccounts = accounts;
+        isTopstepInitialized = true;
+
+        // Send accounts to renderer
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('accounts-loaded', accounts);
+        }
+
+        setState(APP_STATES.CONNECTED);
+      },
+
+      onFill: (fillData) => {
+        console.log('[Main] Fill received:', fillData);
+
+        // Send fill to renderer
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('fill-update', fillData);
+        }
+      },
+
+      onAccountUpdate: (accountData) => {
+        console.log('[Main] Account update:', accountData);
+
+        // Update cumulative PNL
+        currentPnl = topstepClient.getCumulativePnl();
+
+        // Send PNL update to renderer
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('pnl-update', {
+            timestamp: new Date().toISOString(),
+            pnl: currentPnl,
+            accountId: accountData.accountId
+          });
+        }
+
+        // Update tray menu
+        updateTrayMenu();
+      },
+
+      onConnectionStateChanged: (state) => {
+        console.log('[Main] TopstepX connection state:', state);
+
+        // Map to app states
+        if (state === 'connected') {
+          setState(APP_STATES.CONNECTED);
+        } else if (state === 'disconnected') {
+          setState(APP_STATES.DISCONNECTED);
+        } else if (state === 'error') {
+          setState(APP_STATES.WARNING);
+        }
+      }
+    });
+
+    console.log('[Main] TopstepX initialization complete');
+    return true;
+
+  } catch (error) {
+    console.error('[Main] TopstepX initialization failed:', error);
+    setState(APP_STATES.WARNING);
+    return false;
+  }
+}
+
 // --- MOCK CONNECTION MANAGER (The "Flight Simulator") ---
 // This simulates our cloud engine sending real-time data to the agent.
 function startMockCloudFeed() {
@@ -445,9 +534,12 @@ app.whenReady().then(async () => {
     // First run - show activation window
     createActivationWindow();
   } else {
-    // User is activated - show main window and start
+    // User is activated - show main window and initialize TopstepX
     createMainWindow();
-    startMockCloudFeed();
+    await initializeTopstepX();
+
+    // Mock trade directives disabled - will be replaced by cloud WebSocket in Phase 3
+    // startMockCloudFeed();
   }
 
   // This is for macOS behavior
@@ -523,18 +615,31 @@ ipcMain.handle('activate-with-token', async (event, token) => {
 });
 
 // Handle API key submission
-ipcMain.handle('save-api-key', async (event, apiKey) => {
+ipcMain.handle('save-api-key', async (event, credentials) => {
   try {
+    // Validate credentials object
+    if (!credentials || typeof credentials !== 'object') {
+      return { success: false, error: 'Invalid credentials format' };
+    }
+
+    const { username, apiKey } = credentials;
+
+    if (!username || username.length < 3) {
+      return { success: false, error: 'Username appears to be invalid' };
+    }
+
     if (!apiKey || apiKey.length < 10) {
       return { success: false, error: 'API key appears to be invalid' };
     }
 
-    // Store API key using electron.safeStorage
-    const stored = storeApiKey(apiKey);
+    // Store credentials using electron.safeStorage
+    const stored = storeTopstepXCredentials(username, apiKey);
 
     if (!stored) {
-      return { success: false, error: 'Failed to store API key securely' };
+      return { success: false, error: 'Failed to store credentials securely' };
     }
+
+    console.log(`TopstepX credentials stored successfully for user: ${username.substring(0, 3)}***`);
 
     // Close API key window
     if (apiKeyWindow) {
@@ -545,12 +650,13 @@ ipcMain.handle('save-api-key', async (event, apiKey) => {
     // Only create main window if it doesn't exist (first-time setup)
     if (!mainWindow || mainWindow.isDestroyed()) {
       createMainWindow();
-      startMockCloudFeed();
+      await initializeTopstepX();
+      // startMockCloudFeed(); // Mock trade directives - disabled
     }
 
     return { success: true };
   } catch (error) {
-    console.error('API key save error:', error);
+    console.error('Credentials save error:', error);
     return { success: false, error: 'An unexpected error occurred' };
   }
 });
@@ -558,4 +664,66 @@ ipcMain.handle('save-api-key', async (event, apiKey) => {
 // Handle external link opening
 ipcMain.handle('open-external', async (event, url) => {
   shell.openExternal(url);
+});
+
+// --- TopstepX IPC Handlers ---
+
+// Get all TopstepX accounts
+ipcMain.handle('get-topstep-accounts', async () => {
+  if (!isTopstepInitialized) {
+    return [];
+  }
+  return topstepClient.getAccounts();
+});
+
+// Get cumulative PNL
+ipcMain.handle('get-cumulative-pnl', async () => {
+  if (!isTopstepInitialized) {
+    return 0;
+  }
+  return topstepClient.getCumulativePnl();
+});
+
+// Set master kill switch
+ipcMain.handle('set-master-kill-switch', async (event, enabled) => {
+  if (!isTopstepInitialized) {
+    return { success: false, error: 'TopstepX not initialized' };
+  }
+
+  topstepClient.setMasterKillSwitch(enabled);
+  console.log(`[Main] Master kill switch set to: ${enabled}`);
+
+  return { success: true, enabled };
+});
+
+// Get master kill switch status
+ipcMain.handle('get-master-kill-switch', async () => {
+  if (!isTopstepInitialized) {
+    return false;
+  }
+  return topstepClient.getMasterKillSwitch();
+});
+
+// Set account trading status
+ipcMain.handle('set-account-trading', async (event, accountId, enabled) => {
+  if (!isTopstepInitialized) {
+    return { success: false, error: 'TopstepX not initialized' };
+  }
+
+  const success = topstepClient.setAccountTrading(accountId, enabled);
+
+  if (success) {
+    console.log(`[Main] Account ${accountId} trading set to: ${enabled}`);
+    return { success: true, accountId, enabled };
+  } else {
+    return { success: false, error: 'Account not found' };
+  }
+});
+
+// Get trading status for all accounts
+ipcMain.handle('get-trading-status', async () => {
+  if (!isTopstepInitialized) {
+    return { masterEnabled: false, accounts: {} };
+  }
+  return topstepClient.getTradingStatus();
 });

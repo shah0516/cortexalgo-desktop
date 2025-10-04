@@ -10,6 +10,11 @@ function App() {
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [theme, setTheme] = useState('light');
 
+  // TopstepX state
+  const [accounts, setAccounts] = useState([]);
+  const [masterKillSwitch, setMasterKillSwitch] = useState(false);
+  const [fills, setFills] = useState([]);
+
   // Detect OS color scheme preference
   useEffect(() => {
     const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -53,6 +58,29 @@ function App() {
       window.electronAPI.getAppState().then((data) => {
         setAppState(data.state);
         setConnectionStatus(getStatusLabel(data.state));
+      });
+
+      // Listen for TopstepX accounts loaded
+      window.electronAPI.onAccountsLoaded((accountsData) => {
+        console.log('Accounts loaded:', accountsData);
+        setAccounts(accountsData);
+      });
+
+      // Listen for fill updates
+      window.electronAPI.onFillUpdate((fillData) => {
+        console.log('Fill received:', fillData);
+        setFills(prevFills => [fillData, ...prevFills].slice(0, 10)); // Keep last 10 fills
+      });
+
+      // Load initial TopstepX data
+      window.electronAPI.getTopstepAccounts().then((accountsData) => {
+        if (accountsData && accountsData.length > 0) {
+          setAccounts(accountsData);
+        }
+      });
+
+      window.electronAPI.getMasterKillSwitch().then((enabled) => {
+        setMasterKillSwitch(enabled);
       });
     }
   }, []);
@@ -103,18 +131,99 @@ function App() {
     return 'action-neutral';
   };
 
+  // Kill switch handlers
+  const handleMasterKillSwitchToggle = async () => {
+    const newValue = !masterKillSwitch;
+    const result = await window.electronAPI.setMasterKillSwitch(newValue);
+    if (result.success) {
+      setMasterKillSwitch(newValue);
+    }
+  };
+
+  const handleAccountTradingToggle = async (accountId) => {
+    const account = accounts.find(a => a.id === accountId);
+    if (!account) return;
+
+    const newValue = !account.tradingEnabled;
+    const result = await window.electronAPI.setAccountTrading(accountId, newValue);
+
+    if (result.success) {
+      // Update local state
+      setAccounts(prevAccounts =>
+        prevAccounts.map(a =>
+          a.id === accountId ? { ...a, tradingEnabled: newValue } : a
+        )
+      );
+    }
+  };
+
   return (
     <div className={`dashboard ${theme}`}>
       <header className="dashboard-header">
         <h1>CortexAlgo Dashboard</h1>
-        <div className="status-indicator">
-          <span className={`status-dot ${appState}`}></span>
-          <span>{connectionStatus}</span>
+        <div className="header-controls">
+          <button
+            className={`kill-switch-header ${masterKillSwitch ? 'enabled' : 'disabled'}`}
+            onClick={handleMasterKillSwitchToggle}
+            title={masterKillSwitch ? 'Click to disable all trading' : 'Click to enable all trading'}
+          >
+            Trading: {masterKillSwitch ? 'ENABLED' : 'DISABLED'}
+          </button>
+          <div className="status-indicator">
+            <span className={`status-dot ${appState}`}></span>
+            <span>{connectionStatus}</span>
+          </div>
         </div>
       </header>
 
       <div className="dashboard-content">
-        {/* PNL Section */}
+
+        {/* TopstepX Accounts */}
+        {accounts.length > 0 && (
+          <section className="accounts-section">
+            <div className="section-header">
+              <h2>TopstepX Accounts ({accounts.length})</h2>
+            </div>
+            <div className="accounts-grid">
+              {accounts.map((account) => (
+                <div key={account.id} className="account-card">
+                  <div className="account-header">
+                    <div className="account-info">
+                      <h3>{account.name || `Account ${account.id}`}</h3>
+                      <span className="account-id">ID: {account.id}</span>
+                    </div>
+                    <button
+                      className={`account-toggle ${account.tradingEnabled ? 'enabled' : 'disabled'}`}
+                      onClick={() => handleAccountTradingToggle(account.id)}
+                      disabled={!masterKillSwitch}
+                    >
+                      {account.tradingEnabled ? 'Trading ON' : 'Trading OFF'}
+                    </button>
+                  </div>
+                  <div className="account-stats">
+                    <div className="stat">
+                      <label>Balance</label>
+                      <span>{formatCurrency(account.balance || 0)}</span>
+                    </div>
+                    <div className="stat">
+                      <label>PNL</label>
+                      <span className={account.pnl >= 0 ? 'positive' : 'negative'}>
+                        {formatCurrency(account.pnl || 0)}
+                      </span>
+                    </div>
+                    <div className="stat">
+                      <label>Positions</label>
+                      <span>{(account.openPositions || []).length}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* MOCK SECTIONS - Commented out until Phase 3 (Cloud WebSocket) */}
+        {/*
         <section className="pnl-section">
           <div className="section-header">
             <h2>Performance</h2>
@@ -136,7 +245,6 @@ function App() {
           </div>
         </section>
 
-        {/* Trade Directive Section */}
         <section className="directive-section">
           <div className="section-header">
             <h2>Last Received Command</h2>
@@ -185,7 +293,6 @@ function App() {
           )}
         </section>
 
-        {/* System Info Section */}
         <section className="info-section">
           <div className="info-card">
             <h3>System Status</h3>
@@ -209,6 +316,7 @@ function App() {
             </div>
           </div>
         </section>
+        */}
       </div>
 
       <footer className="dashboard-footer">

@@ -80,6 +80,44 @@
   color: var(--text-primary);
 }
 
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.kill-switch-header {
+  padding: 0.5rem 1.25rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.kill-switch-header.enabled {
+  background: var(--green);
+  color: white;
+}
+
+.kill-switch-header.enabled:hover {
+  background: #28a745;
+  transform: scale(1.02);
+}
+
+.kill-switch-header.disabled {
+  background: var(--red);
+  color: white;
+}
+
+.kill-switch-header.disabled:hover {
+  background: #c82333;
+  transform: scale(1.02);
+}
+
 .status-indicator {
   display: flex;
   align-items: center;
@@ -367,6 +405,177 @@ section {
   transition: background-color 0.3s ease;
 }
 
+/* ========== OLD Kill Switch Section (Removed - Now in Header) ========== */
+/* Keeping for reference in case we need to revert
+.kill-switch-section {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.kill-switch-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.kill-switch-info h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 0.15rem;
+  color: var(--text-primary);
+}
+
+.kill-switch-info p {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.kill-switch-button {
+  padding: 0.6rem 1.5rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 120px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.kill-switch-button.enabled {
+  background: var(--green);
+  color: white;
+}
+
+.kill-switch-button.enabled:hover {
+  background: #28a745;
+  transform: scale(1.02);
+}
+
+.kill-switch-button.disabled {
+  background: var(--red);
+  color: white;
+}
+
+.kill-switch-button.disabled:hover {
+  background: #c82333;
+  transform: scale(1.02);
+}
+*/
+
+/* ========== Accounts Section ========== */
+.accounts-section {
+  margin-bottom: 1.5rem;
+}
+
+.accounts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.account-card {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 1.25rem;
+  transition: all 0.2s ease;
+}
+
+.account-card:hover {
+  border-color: var(--blue);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.account-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.account-info h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.account-id {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  font-family: 'SF Mono', Monaco, monospace;
+}
+
+.account-toggle {
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.account-toggle.enabled {
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+.account-toggle.enabled:hover:not(:disabled) {
+  background: var(--green);
+  color: white;
+}
+
+.account-toggle.disabled {
+  background: var(--red-bg);
+  color: var(--red);
+}
+
+.account-toggle.disabled:hover:not(:disabled) {
+  background: var(--red);
+  color: white;
+}
+
+.account-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.account-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.account-stats .stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.account-stats .stat label {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.account-stats .stat span {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
 /* ========== Responsive Design ========== */
 @media (max-width: 768px) {
   .dashboard-content {
@@ -381,5 +590,34 @@ section {
     flex-direction: column;
     gap: 1rem;
     align-items: flex-start;
+  }
+
+  .header-controls {
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .kill-switch-header {
+    width: 100%;
+  }
+
+  .accounts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .account-header {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .account-toggle {
+    width: 100%;
+  }
+
+  .account-stats {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
   }
 }

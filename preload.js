@@ -36,4 +36,24 @@ contextBridge.exposeInMainWorld('electronAPI', {
   activateWithToken: (token) => ipcRenderer.invoke('activate-with-token', token),
   saveApiKey: (apiKey) => ipcRenderer.invoke('save-api-key', apiKey),
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
+
+  // TopstepX account management
+  getTopstepAccounts: () => ipcRenderer.invoke('get-topstep-accounts'),
+  getCumulativePnl: () => ipcRenderer.invoke('get-cumulative-pnl'),
+  onAccountsLoaded: (callback) => {
+    ipcRenderer.on('accounts-loaded', (event, accounts) => {
+      callback(accounts);
+    });
+  },
+  onFillUpdate: (callback) => {
+    ipcRenderer.on('fill-update', (event, fillData) => {
+      callback(fillData);
+    });
+  },
+
+  // Kill switch controls
+  setMasterKillSwitch: (enabled) => ipcRenderer.invoke('set-master-kill-switch', enabled),
+  getMasterKillSwitch: () => ipcRenderer.invoke('get-master-kill-switch'),
+  setAccountTrading: (accountId, enabled) => ipcRenderer.invoke('set-account-trading', accountId, enabled),
+  getTradingStatus: () => ipcRenderer.invoke('get-trading-status'),
 });

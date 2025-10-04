@@ -95,6 +95,7 @@
       margin-bottom: 8px;
     }
 
+    input[type="text"],
     input[type="password"] {
       width: 100%;
       padding: 12px 16px;
@@ -105,11 +106,13 @@
       font-family: 'SF Mono', Monaco, 'Courier New', monospace;
     }
 
+    input[type="text"]:focus,
     input[type="password"]:focus {
       outline: none;
       border-color: #0a84ff;
     }
 
+    input[type="text"]::placeholder,
     input[type="password"]::placeholder {
       color: #86868b;
     }
@@ -206,14 +209,26 @@
 
     <div class="content">
       <h2>Connect Your TopstepX Account</h2>
-      <p>Please paste your TopstepX API key below. This key will be stored securely and encrypted on this computer.</p>
+      <p>Please enter your TopstepX username and API key below. These credentials will be stored securely and encrypted on this computer.</p>
 
       <div class="security-notice">
-        <strong>🔒 Security:</strong> Your API key never leaves your machine. It is encrypted using your operating system's secure storage and only decrypted when needed to execute trades.
+        <strong>🔒 Security:</strong> Your credentials never leave your machine. They are encrypted using your operating system's secure storage and only decrypted when needed to execute trades.
       </div>
     </div>
 
     <form id="apiKeyForm">
+      <div class="form-group">
+        <label for="username">TopstepX Username</label>
+        <input
+          type="text"
+          id="username"
+          placeholder="Enter your username..."
+          autocomplete="off"
+          spellcheck="false"
+          required
+        />
+      </div>
+
       <div class="form-group">
         <label for="apiKey">TopstepX API Key</label>
         <input
@@ -241,6 +256,7 @@
 
   <script>
     const form = document.getElementById('apiKeyForm');
+    const usernameInput = document.getElementById('username');
     const apiKeyInput = document.getElementById('apiKey');
     const button = document.getElementById('saveButton');
     const spinner = document.getElementById('spinner');
@@ -250,7 +266,13 @@
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
 
+      const username = usernameInput.value.trim();
       const apiKey = apiKeyInput.value.trim();
+
+      if (!username) {
+        showError('Please enter your username');
+        return;
+      }
 
       if (!apiKey) {
         showError('Please enter your API key');
@@ -263,18 +285,18 @@
       errorDiv.classList.remove('active');
 
       try {
-        // Send to main process for secure storage
-        const result = await window.electronAPI.saveApiKey(apiKey);
+        // Send both credentials to main process for secure storage
+        const result = await window.electronAPI.saveApiKey({ username, apiKey });
 
         if (result.success) {
           // Success! Main process will close this window and start the app
         } else {
-          showError(result.error || 'Failed to save API key');
+          showError(result.error || 'Failed to save credentials');
           button.disabled = false;
           spinner.classList.remove('active');
         }
       } catch (error) {
-        showError('Failed to save API key. Please try again.');
+        showError('Failed to save credentials. Please try again.');
         button.disabled = false;
         spinner.classList.remove('active');
       }
@@ -290,9 +312,9 @@
       window.electronAPI.openExternal('https://topstepx.com/api-keys');
     });
 
-    // Focus input on load
+    // Focus username input on load
     window.addEventListener('DOMContentLoaded', () => {
-      apiKeyInput.focus();
+      usernameInput.focus();
     });
   </script>
 </body>
