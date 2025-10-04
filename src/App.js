@@ -6,6 +6,7 @@ function App() {
   const [pnlChange, setPnlChange] = useState(0);
   const [lastDirective, setLastDirective] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState('Connected (Mock)');
+  const [appState, setAppState] = useState('connecting');
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [theme, setTheme] = useState('light');
 
@@ -44,11 +45,13 @@ function App() {
 
       // Listen for application state changes
       window.electronAPI.onAppStateChanged((data) => {
+        setAppState(data.state);
         setConnectionStatus(getStatusLabel(data.state));
       });
 
       // Get initial app state
       window.electronAPI.getAppState().then((data) => {
+        setAppState(data.state);
         setConnectionStatus(getStatusLabel(data.state));
       });
     }
@@ -58,7 +61,7 @@ function App() {
     const labels = {
       'connecting': 'Connecting...',
       'connected': 'Connected (Mock)',
-      'disconnected': 'Disconnected',
+      'disconnected': 'Reconnecting...',
       'deactivated': 'Subscription Inactive',
       'warning': 'Action Required'
     };
@@ -105,7 +108,7 @@ function App() {
       <header className="dashboard-header">
         <h1>CortexAlgo Dashboard</h1>
         <div className="status-indicator">
-          <span className="status-dot connected"></span>
+          <span className={`status-dot ${appState}`}></span>
           <span>{connectionStatus}</span>
         </div>
       </header>
@@ -189,11 +192,15 @@ function App() {
             <div className="info-grid">
               <div className="info-item">
                 <label>Cloud Connection</label>
-                <span className="status-badge connected">Active</span>
+                <span className={`status-badge ${appState === 'connected' ? 'connected' : 'neutral'}`}>
+                  {appState === 'connected' ? 'Active' : appState === 'connecting' ? 'Connecting...' : appState === 'disconnected' ? 'Reconnecting' : 'Inactive'}
+                </span>
               </div>
               <div className="info-item">
                 <label>Trading API</label>
-                <span className="status-badge connected">Ready</span>
+                <span className={`status-badge ${appState === 'connected' ? 'connected' : 'neutral'}`}>
+                  {appState === 'connected' ? 'Ready' : 'Standby'}
+                </span>
               </div>
               <div className="info-item">
                 <label>Mode</label>

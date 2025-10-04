@@ -56,9 +56,9 @@ function getTrayIconPath(state) {
   const iconMap = {
     [APP_STATES.CONNECTING]: 'assets/tray-icon-blue.png',
     [APP_STATES.CONNECTED]: 'assets/tray-icon-green.png',
-    [APP_STATES.DISCONNECTED]: 'assets/tray-icon-red.png',
-    [APP_STATES.DEACTIVATED]: 'assets/tray-icon-red.png',
-    [APP_STATES.WARNING]: 'assets/tray-icon-yellow.png'
+    [APP_STATES.DISCONNECTED]: 'assets/tray-icon-yellow.png',  // Yellow: temporary network issue, auto-recovering
+    [APP_STATES.DEACTIVATED]: 'assets/tray-icon-red.png',      // Red: critical, requires user action
+    [APP_STATES.WARNING]: 'assets/tray-icon-yellow.png'        // Yellow: action required (e.g., API key)
   };
 
   const iconPath = iconMap[state] || 'assets/tray-icon.png';
@@ -83,7 +83,7 @@ function updateTrayIcon() {
   const tooltips = {
     [APP_STATES.CONNECTING]: 'CortexAlgo - Connecting...',
     [APP_STATES.CONNECTED]: 'CortexAlgo - Connected',
-    [APP_STATES.DISCONNECTED]: 'CortexAlgo - Disconnected',
+    [APP_STATES.DISCONNECTED]: 'CortexAlgo - Reconnecting...',
     [APP_STATES.DEACTIVATED]: 'CortexAlgo - Subscription Inactive',
     [APP_STATES.WARNING]: 'CortexAlgo - Action Required'
   };
@@ -118,7 +118,7 @@ function buildTrayMenu() {
   const statusLabels = {
     [APP_STATES.CONNECTING]: 'Status: Connecting...',
     [APP_STATES.CONNECTED]: 'Status: Connected (Mock)',
-    [APP_STATES.DISCONNECTED]: 'Status: Disconnected',
+    [APP_STATES.DISCONNECTED]: 'Status: Reconnecting...',
     [APP_STATES.DEACTIVATED]: 'Status: Subscription Inactive',
     [APP_STATES.WARNING]: 'Status: Action Required'
   };
@@ -271,7 +271,7 @@ function startMockCloudFeed() {
   }, 2000); // Send an update every 2 seconds
 
   // Optional: Simulate state changes for testing (uncomment to test all states)
-  // This cycles through different states every 10 seconds for demonstration
+  // This cycles through different states every 20 seconds for demonstration
   /*
   let stateIndex = 0;
   const testStates = [
@@ -286,7 +286,7 @@ function startMockCloudFeed() {
     stateIndex = (stateIndex + 1) % testStates.length;
     console.log(`Mock: Cycling to state: ${testStates[stateIndex]}`);
     setState(testStates[stateIndex]);
-  }, 10000); // Change state every 10 seconds
+  }, 20000); // Change state every 20 seconds
   */
 }
 
