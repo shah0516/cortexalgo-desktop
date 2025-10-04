@@ -20,7 +20,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
     });
   },
 
-  // Future: Methods to send data back to main process
+  // Listen for application state changes
+  onAppStateChanged: (callback) => {
+    ipcRenderer.on('app-state-changed', (event, data) => {
+      callback(data);
+    });
+  },
+
+  // Request current application state
+  getAppState: () => ipcRenderer.invoke('get-app-state'),
   getCurrentPnl: () => ipcRenderer.invoke('get-current-pnl'),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
 });

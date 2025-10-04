@@ -41,8 +41,29 @@ function App() {
       window.electronAPI.onTradeDirective((data) => {
         setLastDirective(data);
       });
+
+      // Listen for application state changes
+      window.electronAPI.onAppStateChanged((data) => {
+        setConnectionStatus(getStatusLabel(data.state));
+      });
+
+      // Get initial app state
+      window.electronAPI.getAppState().then((data) => {
+        setConnectionStatus(getStatusLabel(data.state));
+      });
     }
   }, []);
+
+  const getStatusLabel = (state) => {
+    const labels = {
+      'connecting': 'Connecting...',
+      'connected': 'Connected (Mock)',
+      'disconnected': 'Disconnected',
+      'deactivated': 'Subscription Inactive',
+      'warning': 'Action Required'
+    };
+    return labels[state] || 'Unknown';
+  };
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('en-US', {

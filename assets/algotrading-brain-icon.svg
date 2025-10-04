@@ -1,0 +1,34 @@
+<svg id="discord-icon-svg" width="450" height="450" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <!-- Gradient for the brain outline -->
+                <linearGradient id="brainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#4A90E2;"/> <!-- Bright Blue -->
+                    <stop offset="100%" style="stop-color:#5865F2;"/> <!-- Discord Blurple -->
+                </linearGradient>
+                <!-- Gradient for the chart line -->
+                <linearGradient id="chartGradient" x1="0%" y1="100%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:#34D399;"/> <!-- Green -->
+                    <stop offset="100%" style="stop-color:#A7F3D0;"/> <!-- Light Green -->
+                </linearGradient>
+            </defs>
+            
+            <!-- Brain Outline -->
+            <path d="M50 10 C 25 10, 15 30, 20 50 C 15 70, 25 90, 50 90 C 75 90, 85 70, 80 50 C 85 30, 75 10, 50 10 Z" stroke="url(#brainGradient)" stroke-width="4" fill="#2c2f33" fill-opacity="0.5"/>
+            <!-- Internal brain folds (stylized) -->
+            <path d="M50 10 V 40 C 40 50, 60 60, 50 70 V 90" stroke="url(#brainGradient)" stroke-width="2" stroke-opacity="0.6"/>
+            <path d="M35 25 C 45 35, 45 55, 35 65" stroke="url(#brainGradient)" stroke-width="2" stroke-opacity="0.6"/>
+            <path d="M65 25 C 55 35, 55 55, 65 65" stroke="url(#brainGradient)" stroke-width="2" stroke-opacity="0.6"/>
+
+            <!-- Upward-trending chart line -->
+            <polyline points="25,65 35,55 45,60 55,45 65,40 75,25" stroke="url(#chartGradient)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+
+            <!-- Glowing nodes representing AI/Algo intelligence -->
+            <g class="node-glow" fill="#34D399">
+                <circle cx="25" cy="65" r="2.5"/>
+                <circle cx="35" cy="55" r="2.5"/>
+                <circle cx="45" cy="60" r="2.5"/>
+                <circle cx="55" cy="45" r="2.5"/>
+                <circle cx="65" cy="40" r="2.5"/>
+                <circle cx="75" cy="25" r="2.5"/>
+            </g>
+        </svg>
