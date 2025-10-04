@@ -1,0 +1,52 @@
+{
+  "name": "execution-agent-desktop",
+  "version": "1.0.0",
+  "description": "Desktop Execution Agent for Cloud-Hybrid Trading Platform",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux"
+  },
+  "keywords": [
+    "electron",
+    "trading",
+    "desktop"
+  ],
+  "author": "Your Name",
+  "license": "ISC",
+  "dependencies": {
+    "electron-updater": "^6.1.7",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "electron": "^28.1.0",
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "com.tradingplatform.executionagent",
+    "productName": "Execution Agent",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "public/**/*",
+      "src/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.finance",
+      "target": "dmg"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}
