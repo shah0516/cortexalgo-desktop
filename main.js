@@ -4,6 +4,7 @@ const { app, BrowserWindow, Tray, Menu, ipcMain, safeStorage, shell } = require(
 const path = require('path');
 const fs = require('fs');
 const topstepClient = require('./services/topstepClient');
+const cloudApiService = require('./services/cloudApiService');
 const keytar = require('keytar');
 
 let tray = null;
@@ -13,10 +14,13 @@ let apiKeyWindow = null;
 let currentPnl = 0;
 let topstepAccounts = [];
 let isTopstepInitialized = false;
+let cloudConnectionState = 'disconnected'; // Track cloud connection separately
 
 // Credentials configuration
 const SERVICE_NAME = 'CortexAlgo';
-const REFRESH_TOKEN_ACCOUNT = 'refresh_token';
+const CLOUD_REFRESH_TOKEN_ACCOUNT = 'cloud_refresh_token';
+const CLOUD_ACCESS_TOKEN_ACCOUNT = 'cloud_access_token';
+const CLOUD_BOT_ID_ACCOUNT = 'cloud_bot_id';
 const CREDENTIALS_FILE = path.join(app.getPath('userData'), 'topstepx_credentials.enc');
 
 // Application State Management
@@ -32,33 +36,47 @@ let currentState = APP_STATES.CONNECTING;
 
 // ========== Secure Credential Storage ==========
 
-// Store refresh token in OS keychain
-async function storeRefreshToken(token) {
+// ===== Cloud API Tokens =====
+
+// Store cloud tokens in OS keychain
+async function storeCloudTokens(botId, accessToken, refreshToken) {
   try {
-    await keytar.setPassword(SERVICE_NAME, REFRESH_TOKEN_ACCOUNT, token);
+    await keytar.setPassword(SERVICE_NAME, CLOUD_BOT_ID_ACCOUNT, botId);
+    await keytar.setPassword(SERVICE_NAME, CLOUD_ACCESS_TOKEN_ACCOUNT, accessToken);
+    await keytar.setPassword(SERVICE_NAME, CLOUD_REFRESH_TOKEN_ACCOUNT, refreshToken);
     return true;
   } catch (error) {
-    console.error('Failed to store refresh token:', error);
+    console.error('Failed to store cloud tokens:', error);
     return false;
   }
 }
 
-// Retrieve refresh token from OS keychain
-async function getRefreshToken() {
+// Retrieve cloud tokens from OS keychain
+async function getCloudTokens() {
   try {
-    return await keytar.getPassword(SERVICE_NAME, REFRESH_TOKEN_ACCOUNT);
+    const botId = await keytar.getPassword(SERVICE_NAME, CLOUD_BOT_ID_ACCOUNT);
+    const accessToken = await keytar.getPassword(SERVICE_NAME, CLOUD_ACCESS_TOKEN_ACCOUNT);
+    const refreshToken = await keytar.getPassword(SERVICE_NAME, CLOUD_REFRESH_TOKEN_ACCOUNT);
+
+    if (botId && accessToken && refreshToken) {
+      return { botId, accessToken, refreshToken };
+    }
+    return null;
   } catch (error) {
-    console.error('Failed to get refresh token:', error);
+    console.error('Failed to get cloud tokens:', error);
     return null;
   }
 }
 
-// Delete refresh token from OS keychain
-async function deleteRefreshToken() {
+// Delete cloud tokens from OS keychain
+async function deleteCloudTokens() {
   try {
-    return await keytar.deletePassword(SERVICE_NAME, REFRESH_TOKEN_ACCOUNT);
+    await keytar.deletePassword(SERVICE_NAME, CLOUD_BOT_ID_ACCOUNT);
+    await keytar.deletePassword(SERVICE_NAME, CLOUD_ACCESS_TOKEN_ACCOUNT);
+    await keytar.deletePassword(SERVICE_NAME, CLOUD_REFRESH_TOKEN_ACCOUNT);
+    return true;
   } catch (error) {
-    console.error('Failed to delete refresh token:', error);
+    console.error('Failed to delete cloud tokens:', error);
     return false;
   }
 }
@@ -106,9 +124,9 @@ function deleteTopstepXCredentials() {
 
 // Check if user has completed activation
 async function isActivated() {
-  const refreshToken = await getRefreshToken();
+  const cloudTokens = await getCloudTokens();
   const credentials = getTopstepXCredentials();
-  return refreshToken !== null && credentials !== null && credentials.username && credentials.apiKey;
+  return cloudTokens !== null && credentials !== null && credentials.username && credentials.apiKey;
 }
 
 // ========== Window Creation Functions ==========
@@ -222,19 +240,29 @@ function getTrayIconPath(state) {
 function updateTrayIcon() {
   if (!tray) return;
 
-  const iconPath = getTrayIconPath(currentState);
+  // Determine effective state considering both TopstepX and Cloud
+  let effectiveState = currentState;
+
+  // If TopstepX is connected but Cloud is not, show warning
+  if (currentState === APP_STATES.CONNECTED && cloudConnectionState !== 'connected') {
+    effectiveState = APP_STATES.WARNING;
+  }
+
+  const iconPath = getTrayIconPath(effectiveState);
   tray.setImage(path.join(__dirname, iconPath));
 
   // Update tooltip based on state
   const tooltips = {
     [APP_STATES.CONNECTING]: 'CortexAlgo - Connecting...',
-    [APP_STATES.CONNECTED]: 'CortexAlgo - Connected',
+    [APP_STATES.CONNECTED]: cloudConnectionState === 'connected'
+      ? 'CortexAlgo - Connected (TopstepX + Cloud)'
+      : 'CortexAlgo - Connected (TopstepX only, Cloud disconnected)',
     [APP_STATES.DISCONNECTED]: 'CortexAlgo - Reconnecting...',
     [APP_STATES.DEACTIVATED]: 'CortexAlgo - Subscription Inactive',
-    [APP_STATES.WARNING]: 'CortexAlgo - Action Required'
+    [APP_STATES.WARNING]: 'CortexAlgo - Cloud Disconnected'
   };
 
-  tray.setToolTip(tooltips[currentState] || 'CortexAlgo');
+  tray.setToolTip(tooltips[effectiveState] || 'CortexAlgo');
 }
 
 // Update application state and refresh UI
@@ -263,10 +291,12 @@ function buildTrayMenu() {
   // Status label (varies by state)
   const statusLabels = {
     [APP_STATES.CONNECTING]: 'Status: Connecting...',
-    [APP_STATES.CONNECTED]: 'Status: Connected (Mock)',
+    [APP_STATES.CONNECTED]: cloudConnectionState === 'connected'
+      ? 'Status: Connected (TopstepX + Cloud)'
+      : 'Status: TopstepX Connected, Cloud Disconnected',
     [APP_STATES.DISCONNECTED]: 'Status: Reconnecting...',
     [APP_STATES.DEACTIVATED]: 'Status: Subscription Inactive',
-    [APP_STATES.WARNING]: 'Status: Action Required'
+    [APP_STATES.WARNING]: 'Status: Cloud Disconnected'
   };
 
   menuTemplate.push({
@@ -355,6 +385,117 @@ function createTray() {
       mainWindow.show();
     }
   });
+}
+
+// --- CLOUD API INTEGRATION ---
+// Initialize and connect to Cloud API
+async function initializeCloudApi() {
+  console.log('[Main] Initializing Cloud API...');
+
+  try {
+    // Initialize cloud service with event handlers
+    cloudApiService.initialize({
+      onCommand: (commandData) => {
+        console.log('[Main] Cloud command received:', commandData);
+        handleCloudCommand(commandData);
+      },
+      onConnectionStateChanged: (state) => {
+        console.log('[Main] Cloud connection state:', state);
+
+        // Update cloud connection state
+        cloudConnectionState = state;
+
+        // Update tray icon and menu to reflect cloud status
+        updateTrayIcon();
+        updateTrayMenu();
+
+        // Notify UI of cloud connection status
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('cloud-connection-changed', {
+            status: state,
+            timestamp: new Date().toISOString()
+          });
+        }
+      }
+    });
+
+    // Get stored tokens
+    const tokens = await getCloudTokens();
+    if (!tokens) {
+      console.error('[Main] No cloud tokens found');
+      return false;
+    }
+
+    // Refresh tokens before connecting (in case they expired)
+    console.log('[Main] Refreshing access token...');
+    const refreshResult = await cloudApiService.refreshAccessToken(tokens.refreshToken);
+
+    if (!refreshResult.success) {
+      console.error('[Main] Token refresh failed. User may need to reactivate.');
+      return false;
+    }
+
+    // Store refreshed tokens
+    await storeCloudTokens(tokens.botId, refreshResult.accessToken, refreshResult.refreshToken);
+
+    // Set tokens in cloud service
+    cloudApiService.setTokens({
+      botId: tokens.botId,
+      accessToken: refreshResult.accessToken,
+      refreshToken: refreshResult.refreshToken
+    });
+
+    // Connect to WebSocket with fresh token
+    await cloudApiService.connectWebSocket(refreshResult.accessToken);
+    console.log('[Main] Cloud WebSocket connected');
+
+    // Start telemetry reporting
+    cloudApiService.startTelemetryReporting(() => {
+      return topstepClient.getAccounts();
+    });
+
+    // Start token refresh
+    cloudApiService.startTokenRefresh(async (newTokens) => {
+      console.log('[Main] Cloud tokens refreshed');
+      await storeCloudTokens(cloudApiService.getBotId(), newTokens.accessToken, newTokens.refreshToken);
+    });
+
+    console.log('[Main] Cloud API initialization complete');
+    return true;
+
+  } catch (error) {
+    console.error('[Main] Cloud API initialization failed:', error);
+    return false;
+  }
+}
+
+// Handle commands from cloud
+function handleCloudCommand(commandData) {
+  const { command, payload } = commandData;
+
+  switch (command) {
+    case 'SET_TRADING_STATUS':
+      console.log('[Main] Applying kill switch from cloud:', payload.enabled);
+
+      // Apply kill switch to TopstepX
+      if (isTopstepInitialized) {
+        topstepClient.setMasterKillSwitch(payload.enabled);
+
+        // Update UI
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('trading-status-changed', {
+            source: 'cloud',
+            enabled: payload.enabled
+          });
+        }
+
+        console.log(`[Main] Kill switch ${payload.enabled ? 'DISABLED' : 'ACTIVATED'} by cloud`);
+      }
+      break;
+
+    default:
+      console.warn('[Main] Unknown command from cloud:', command);
+  }
 }
 
 // --- TOPSTEPX INTEGRATION ---
@@ -534,12 +675,14 @@ app.whenReady().then(async () => {
     // First run - show activation window
     createActivationWindow();
   } else {
-    // User is activated - show main window and initialize TopstepX
+    // User is activated - show main window and initialize services
     createMainWindow();
+
+    // Initialize TopstepX
     await initializeTopstepX();
 
-    // Mock trade directives disabled - will be replaced by cloud WebSocket in Phase 3
-    // startMockCloudFeed();
+    // Initialize Cloud API (WebSocket + telemetry)
+    await initializeCloudApi();
   }
 
   // This is for macOS behavior
@@ -580,24 +723,28 @@ ipcMain.handle('get-app-state', async () => {
 // Handle activation token submission
 ipcMain.handle('activate-with-token', async (event, token) => {
   try {
-    // Mock validation: Accept any token starting with 'act_'
-    if (!token.startsWith('act_')) {
+    // Validate token format
+    if (!token || !token.startsWith('act_')) {
       return { success: false, error: 'Invalid activation token format' };
     }
 
-    // In production, this would make an API call to validate the token
-    // For now, simulate a successful activation
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
+    console.log('[Main] Activating bot with cloud API...');
 
-    // Generate a mock refresh token
-    const refreshToken = `refresh_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // Call cloud API to activate bot
+    const result = await cloudApiService.activateBot(token);
 
-    // Store refresh token in OS keychain
-    const stored = await storeRefreshToken(refreshToken);
+    if (!result.success) {
+      return { success: false, error: result.error };
+    }
+
+    // Store cloud tokens in OS keychain
+    const stored = await storeCloudTokens(result.botId, result.accessToken, result.refreshToken);
 
     if (!stored) {
       return { success: false, error: 'Failed to store credentials securely' };
     }
+
+    console.log('[Main] Bot activation successful. Bot ID:', result.botId);
 
     // Close activation window and show API key window
     if (activationWindow) {
@@ -609,7 +756,7 @@ ipcMain.handle('activate-with-token', async (event, token) => {
 
     return { success: true };
   } catch (error) {
-    console.error('Activation error:', error);
+    console.error('[Main] Activation error:', error);
     return { success: false, error: 'An unexpected error occurred' };
   }
 });
@@ -651,7 +798,9 @@ ipcMain.handle('save-api-key', async (event, credentials) => {
     if (!mainWindow || mainWindow.isDestroyed()) {
       createMainWindow();
       await initializeTopstepX();
-      // startMockCloudFeed(); // Mock trade directives - disabled
+
+      // Initialize Cloud API (WebSocket + telemetry)
+      await initializeCloudApi();
     }
 
     return { success: true };

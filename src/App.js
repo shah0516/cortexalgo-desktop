@@ -15,6 +15,9 @@ function App() {
   const [masterKillSwitch, setMasterKillSwitch] = useState(false);
   const [fills, setFills] = useState([]);
 
+  // Cloud connection state
+  const [cloudConnectionStatus, setCloudConnectionStatus] = useState('disconnected');
+
   // Detect OS color scheme preference
   useEffect(() => {
     const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -70,6 +73,18 @@ function App() {
       window.electronAPI.onFillUpdate((fillData) => {
         console.log('Fill received:', fillData);
         setFills(prevFills => [fillData, ...prevFills].slice(0, 10)); // Keep last 10 fills
+      });
+
+      // Listen for trading status changes from cloud
+      window.electronAPI.onTradingStatusChanged((data) => {
+        console.log('Trading status changed from cloud:', data);
+        setMasterKillSwitch(data.enabled);
+      });
+
+      // Listen for cloud connection status changes
+      window.electronAPI.onCloudConnectionChanged((data) => {
+        console.log('Cloud connection status:', data.status);
+        setCloudConnectionStatus(data.status);
       });
 
       // Load initial TopstepX data
@@ -170,8 +185,8 @@ function App() {
             Trading: {masterKillSwitch ? 'ENABLED' : 'DISABLED'}
           </button>
           <div className="status-indicator">
-            <span className={`status-dot ${appState}`}></span>
-            <span>{connectionStatus}</span>
+            <span className={`status-dot ${cloudConnectionStatus === 'connected' ? 'connected' : cloudConnectionStatus === 'reconnecting' ? 'warning' : 'disconnected'}`}></span>
+            <span>Cloud: {cloudConnectionStatus === 'connected' ? 'Connected' : cloudConnectionStatus === 'reconnecting' ? 'Reconnecting...' : cloudConnectionStatus === 'error' ? 'Disconnected' : 'Disconnected'}</span>
           </div>
         </div>
       </header>

@@ -56,4 +56,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getMasterKillSwitch: () => ipcRenderer.invoke('get-master-kill-switch'),
   setAccountTrading: (accountId, enabled) => ipcRenderer.invoke('set-account-trading', accountId, enabled),
   getTradingStatus: () => ipcRenderer.invoke('get-trading-status'),
+
+  // Listen for trading status changes from cloud
+  onTradingStatusChanged: (callback) => {
+    ipcRenderer.on('trading-status-changed', (event, data) => {
+      callback(data);
+    });
+  },
+
+  // Listen for cloud connection status changes
+  onCloudConnectionChanged: (callback) => {
+    ipcRenderer.on('cloud-connection-changed', (event, data) => {
+      callback(data);
+    });
+  },
 });
