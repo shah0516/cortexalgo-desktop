@@ -24,12 +24,13 @@ module.exports = {
   // Admin API Base URL (for HTTP requests)
   // Development: Uses 127.0.0.1 (IPv4) to avoid DNS resolution issues
   // Production: Set ADMIN_API_URL env var to your cloud endpoint (e.g., https://api.cortexalgo.com)
-  ADMIN_API_URL: process.env.ADMIN_API_URL || 'http://127.0.0.1:3000',
+  ADMIN_API_URL: process.env.ADMIN_API_URL || 'https://api.cortexalgo.com',
 
   // Admin API WebSocket URL (for real-time communication)
   // Development: Uses 127.0.0.1 (IPv4) to avoid DNS resolution issues
   // Production: Set ADMIN_WS_URL env var to your cloud endpoint (e.g., wss://api.cortexalgo.com)
-  ADMIN_WS_URL: process.env.ADMIN_WS_URL || 'http://127.0.0.1:3000',
+  // Note: Socket.IO automatically handles protocol conversion (https -> wss, http -> ws)
+  ADMIN_WS_URL: process.env.ADMIN_WS_URL || 'https://api.cortexalgo.com',
 
   // Telemetry reporting interval (30 seconds)
   TELEMETRY_INTERVAL_MS: 30 * 1000,

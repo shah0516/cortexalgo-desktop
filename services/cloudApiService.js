@@ -105,17 +105,16 @@ async function refreshAccessToken(currentRefreshToken) {
       }
     );
 
-    if (response.data && response.data.accessToken && response.data.refreshToken) {
+    if (response.data && response.data.accessToken) {
       console.log('[CloudAPI] Token refresh successful');
 
-      // Update tokens
+      // Update access token (refresh token stays the same)
       accessToken = response.data.accessToken;
-      refreshToken = response.data.refreshToken;
 
       return {
         success: true,
         accessToken: response.data.accessToken,
-        refreshToken: response.data.refreshToken
+        refreshToken: currentRefreshToken // Refresh token doesn't change
       };
     }
 
@@ -147,15 +146,21 @@ async function connectWebSocket(token) {
       }
 
       // Create new socket connection
+      console.log('[CloudAPI] Connecting to:', config.ADMIN_WS_URL);
+      console.log('[CloudAPI] With token:', token ? token.substring(0, 20) + '...' : 'NO TOKEN');
+
       socket = io(config.ADMIN_WS_URL, {
         auth: {
           token: token
         },
+        transports: ['websocket', 'polling'], // Try WebSocket first, fallback to polling
         reconnection: true,
         reconnectionDelay: 5000,
         reconnectionAttempts: Infinity,
         timeout: 10000
       });
+
+      console.log('[CloudAPI] Socket.IO client created, waiting for connection...');
 
       // Connection successful
       socket.on('connect', () => {
