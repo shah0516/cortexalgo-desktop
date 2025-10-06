@@ -9,16 +9,13 @@ const log = require('electron-log');
 autoUpdater.logger = log;
 autoUpdater.logger.transports.file.level = 'info';
 
-// Configure for private GitHub repo
-// Set GH_TOKEN environment variable for electron-updater to use
-// Note: electron-updater reads this automatically for private repo authentication
-process.env.GH_TOKEN = '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';
-
+// Configure for public GitHub repo
+// No authentication needed for public repositories
 autoUpdater.setFeedURL({
   provider: 'github',
   owner: 'shah0516',
   repo: 'cortexalgo-desktop',
-  private: true
+  private: false // Repository will be public after security hardening
 });
 
 // Option 1: Ask before download (recommended for beta)

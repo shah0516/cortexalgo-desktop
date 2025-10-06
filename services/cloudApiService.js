@@ -2,18 +2,31 @@
 // CortexAlgo Cloud API Service - Fleet Management & Telemetry
 
 const axios = require('axios');
+const https = require('https');
 const io = require('socket.io-client');
 const config = require('../config');
+const securityService = require('./securityService');
 
 // Module-level state
 let socket = null;
 let accessToken = null;
 let refreshToken = null;
 let botId = null;
+let deviceFingerprint = null;
 let isConnected = false;
 let telemetryInterval = null;
 let heartbeatInterval = null;
 let tokenRefreshInterval = null;
+
+// Certificate pinning (updated when certificate rotates)
+let expectedCertFingerprint = null; // Set to null to disable pinning initially
+
+// Rate limiters for different endpoints
+const rateLimiters = {
+  activation: new securityService.RateLimiter(5, 60 * 60 * 1000), // 5 per hour
+  telemetry: new securityService.RateLimiter(100, 15 * 60 * 1000), // 100 per 15 min
+  tokenRefresh: new securityService.RateLimiter(20, 60 * 60 * 1000) // 20 per hour
+};
 
 // Event handlers
 let eventHandlers = {
@@ -31,20 +44,69 @@ function initialize(handlers) {
 }
 
 /**
+ * Create HTTPS agent with certificate pinning
+ * @returns {https.Agent} Configured HTTPS agent
+ */
+function createSecureAgent() {
+  return new https.Agent({
+    checkServerIdentity: (hostname, cert) => {
+      // Skip pinning if no expected fingerprint is set
+      if (!expectedCertFingerprint) {
+        return undefined; // Use default verification
+      }
+
+      // Verify certificate fingerprint
+      const fingerprint = securityService.getCertificateFingerprint({ getPeerCertificate: () => cert });
+
+      if (fingerprint !== expectedCertFingerprint) {
+        const error = new Error(
+          `Certificate fingerprint mismatch! Expected: ${expectedCertFingerprint}, Got: ${fingerprint}`
+        );
+        error.code = 'CERT_PINNING_FAILED';
+        throw error;
+      }
+
+      console.log('[CloudAPI] Certificate pinning validated');
+      return undefined; // Certificate is valid
+    }
+  });
+}
+
+/**
  * Activate bot with single-use activation token
  * @param {string} activationToken - Single-use activation token from admin
+ * @param {string} fingerprint - Device fingerprint for machine-bound sessions
  * @returns {Promise<Object>} {success, botId, accessToken, refreshToken, error}
  */
-async function activateBot(activationToken) {
+async function activateBot(activationToken, fingerprint) {
   console.log('[CloudAPI] Activating bot with token...');
+  console.log(`[CloudAPI] Device fingerprint: ${fingerprint.substring(0, 16)}...`);
 
   try {
+    // Check rate limit
+    try {
+      rateLimiters.activation.checkLimit();
+    } catch (error) {
+      console.warn('[CloudAPI] Activation rate limit exceeded:', error.message);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+
+    // Store device fingerprint
+    deviceFingerprint = fingerprint;
+
     const response = await axios.post(
       `${config.ADMIN_API_URL}/v1/auth/activate`,
-      { activationToken },
+      {
+        activationToken,
+        deviceFingerprint: fingerprint
+      },
       {
         headers: { 'Content-Type': 'application/json' },
-        timeout: 10000
+        timeout: 10000,
+        httpsAgent: createSecureAgent()
       }
     );
 
@@ -78,6 +140,8 @@ async function activateBot(activationToken) {
       }
     } else if (error.code === 'ECONNREFUSED') {
       errorMessage = 'Cannot connect to CortexAlgo cloud. Please check your internet connection.';
+    } else if (error.message && error.message.includes('certificate')) {
+      errorMessage = 'SSL certificate validation failed. Possible security threat.';
     }
 
     return {
@@ -96,12 +160,27 @@ async function refreshAccessToken(currentRefreshToken) {
   console.log('[CloudAPI] Refreshing access token...');
 
   try {
+    // Check rate limit
+    try {
+      rateLimiters.tokenRefresh.checkLimit();
+    } catch (error) {
+      console.warn('[CloudAPI] Token refresh rate limit exceeded:', error.message);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+
     const response = await axios.post(
       `${config.ADMIN_API_URL}/v1/auth/refresh`,
       { refreshToken: currentRefreshToken },
       {
-        headers: { 'Content-Type': 'application/json' },
-        timeout: 10000
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Device-Fingerprint': deviceFingerprint || ''
+        },
+        timeout: 10000,
+        httpsAgent: createSecureAgent()
       }
     );
 
@@ -317,7 +396,20 @@ async function sendTelemetry(accounts) {
     return false;
   }
 
+  if (!deviceFingerprint) {
+    console.error('[CloudAPI] Cannot send telemetry - no device fingerprint');
+    return false;
+  }
+
   try {
+    // Check rate limit
+    try {
+      rateLimiters.telemetry.checkLimit();
+    } catch (error) {
+      console.warn('[CloudAPI] Telemetry rate limit exceeded:', error.message);
+      return false;
+    }
+
     const telemetryData = {
       accounts: accounts.map(account => ({
         accountId: String(account.id || account.accountId || ''),
@@ -329,15 +421,20 @@ async function sendTelemetry(accounts) {
       }))
     };
 
+    // Sign the request
+    const signedRequest = securityService.signRequest(telemetryData, accessToken);
+
     const response = await axios.post(
       `${config.ADMIN_API_URL}/v1/ingest/telemetry`,
-      telemetryData,
+      signedRequest,
       {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
+          'X-Device-Fingerprint': deviceFingerprint,
           'Content-Type': 'application/json'
         },
-        timeout: 10000
+        timeout: 10000,
+        httpsAgent: createSecureAgent()
       }
     );
 
@@ -456,13 +553,59 @@ function getBotId() {
 
 /**
  * Set tokens (used when loading from storage)
- * @param {Object} tokens - {accessToken, refreshToken, botId}
+ * @param {Object} tokens - {accessToken, refreshToken, botId, deviceFingerprint}
  */
 function setTokens(tokens) {
   accessToken = tokens.accessToken;
   refreshToken = tokens.refreshToken;
   botId = tokens.botId;
+  deviceFingerprint = tokens.deviceFingerprint;
   console.log('[CloudAPI] Tokens set from storage');
+  if (deviceFingerprint) {
+    console.log(`[CloudAPI] Device fingerprint: ${deviceFingerprint.substring(0, 16)}...`);
+  }
+}
+
+/**
+ * Set device fingerprint (used when loading from storage)
+ * @param {string} fingerprint - Device fingerprint
+ */
+function setDeviceFingerprint(fingerprint) {
+  deviceFingerprint = fingerprint;
+  console.log(`[CloudAPI] Device fingerprint set: ${fingerprint.substring(0, 16)}...`);
+}
+
+/**
+ * Get current device fingerprint
+ * @returns {string|null} Device fingerprint
+ */
+function getDeviceFingerprint() {
+  return deviceFingerprint;
+}
+
+/**
+ * Set expected certificate fingerprint for pinning
+ * @param {string} fingerprint - Expected certificate fingerprint (sha256 base64)
+ */
+function setExpectedCertificateFingerprint(fingerprint) {
+  expectedCertFingerprint = fingerprint;
+  if (fingerprint) {
+    console.log(`[CloudAPI] Certificate pinning enabled: ${fingerprint.substring(0, 20)}...`);
+  } else {
+    console.log('[CloudAPI] Certificate pinning disabled');
+  }
+}
+
+/**
+ * Get rate limiter stats
+ * @returns {Object} Rate limiter statistics
+ */
+function getRateLimiterStats() {
+  return {
+    activation: rateLimiters.activation.getStats(),
+    telemetry: rateLimiters.telemetry.getStats(),
+    tokenRefresh: rateLimiters.tokenRefresh.getStats()
+  };
 }
 
 /**
@@ -488,6 +631,7 @@ function clearTokens() {
   accessToken = null;
   refreshToken = null;
   botId = null;
+  deviceFingerprint = null;
   disconnectWebSocket();
   stopTelemetryReporting();
   stopTokenRefresh();
@@ -508,6 +652,10 @@ module.exports = {
   getConnectionStatus,
   getBotId,
   setTokens,
+  setDeviceFingerprint,
+  getDeviceFingerprint,
+  setExpectedCertificateFingerprint,
+  getRateLimiterStats,
   getAccessToken,
   getRefreshToken,
   clearTokens
