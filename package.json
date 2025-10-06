@@ -1,6 +1,6 @@
 {
   "name": "cortexalgo-desktop",
-  "version": "0.1.0-beta.2",
+  "version": "0.1.0-beta.7",
   "description": "CortexAlgo Desktop - Cloud-Hybrid Trading Platform",
   "main": "main.js",
   "scripts": {
@@ -23,6 +23,7 @@
     "electron-log": "^5.4.3",
     "electron-updater": "^6.1.7",
     "keytar": "^7.9.0",
+    "node-machine-id": "^1.1.12",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "socket.io-client": "^4.8.1"
@@ -52,13 +53,19 @@
       "category": "public.app-category.finance",
       "target": {
         "target": "dmg",
-        "arch": ["x64", "arm64"]
+        "arch": [
+          "x64",
+          "arm64"
+        ]
       }
     },
     "win": {
       "target": {
         "target": "nsis",
-        "arch": ["x64", "arm64"]
+        "arch": [
+          "x64",
+          "arm64"
+        ]
       }
     },
     "linux": {

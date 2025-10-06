@@ -6,6 +6,7 @@ const fs = require('fs');
 const topstepClient = require('./services/topstepClient');
 const cloudApiService = require('./services/cloudApiService');
 const UpdateManager = require('./services/updateManager');
+const securityService = require('./services/securityService');
 const keytar = require('keytar');
 
 let tray = null;
@@ -23,6 +24,7 @@ const SERVICE_NAME = 'CortexAlgo';
 const CLOUD_REFRESH_TOKEN_ACCOUNT = 'cloud_refresh_token';
 const CLOUD_ACCESS_TOKEN_ACCOUNT = 'cloud_access_token';
 const CLOUD_BOT_ID_ACCOUNT = 'cloud_bot_id';
+const CLOUD_DEVICE_FINGERPRINT_ACCOUNT = 'cloud_device_fingerprint';
 const CREDENTIALS_FILE = path.join(app.getPath('userData'), 'topstepx_credentials.enc');
 
 // Application State Management
@@ -41,11 +43,12 @@ let currentState = APP_STATES.CONNECTING;
 // ===== Cloud API Tokens =====
 
 // Store cloud tokens in OS keychain
-async function storeCloudTokens(botId, accessToken, refreshToken) {
+async function storeCloudTokens(botId, accessToken, refreshToken, deviceFingerprint) {
   try {
     await keytar.setPassword(SERVICE_NAME, CLOUD_BOT_ID_ACCOUNT, botId);
     await keytar.setPassword(SERVICE_NAME, CLOUD_ACCESS_TOKEN_ACCOUNT, accessToken);
     await keytar.setPassword(SERVICE_NAME, CLOUD_REFRESH_TOKEN_ACCOUNT, refreshToken);
+    await keytar.setPassword(SERVICE_NAME, CLOUD_DEVICE_FINGERPRINT_ACCOUNT, deviceFingerprint);
     return true;
   } catch (error) {
     console.error('Failed to store cloud tokens:', error);
@@ -59,9 +62,10 @@ async function getCloudTokens() {
     const botId = await keytar.getPassword(SERVICE_NAME, CLOUD_BOT_ID_ACCOUNT);
     const accessToken = await keytar.getPassword(SERVICE_NAME, CLOUD_ACCESS_TOKEN_ACCOUNT);
     const refreshToken = await keytar.getPassword(SERVICE_NAME, CLOUD_REFRESH_TOKEN_ACCOUNT);
+    const deviceFingerprint = await keytar.getPassword(SERVICE_NAME, CLOUD_DEVICE_FINGERPRINT_ACCOUNT);
 
-    if (botId && accessToken && refreshToken) {
-      return { botId, accessToken, refreshToken };
+    if (botId && accessToken && refreshToken && deviceFingerprint) {
+      return { botId, accessToken, refreshToken, deviceFingerprint };
     }
     return null;
   } catch (error) {
@@ -76,6 +80,7 @@ async function deleteCloudTokens() {
     await keytar.deletePassword(SERVICE_NAME, CLOUD_BOT_ID_ACCOUNT);
     await keytar.deletePassword(SERVICE_NAME, CLOUD_ACCESS_TOKEN_ACCOUNT);
     await keytar.deletePassword(SERVICE_NAME, CLOUD_REFRESH_TOKEN_ACCOUNT);
+    await keytar.deletePassword(SERVICE_NAME, CLOUD_DEVICE_FINGERPRINT_ACCOUNT);
     return true;
   } catch (error) {
     console.error('Failed to delete cloud tokens:', error);
@@ -437,14 +442,15 @@ async function initializeCloudApi() {
       return false;
     }
 
-    // Store refreshed tokens
-    await storeCloudTokens(tokens.botId, refreshResult.accessToken, refreshResult.refreshToken);
+    // Store refreshed tokens (preserve device fingerprint)
+    await storeCloudTokens(tokens.botId, refreshResult.accessToken, refreshResult.refreshToken, tokens.deviceFingerprint);
 
     // Set tokens in cloud service
     cloudApiService.setTokens({
       botId: tokens.botId,
       accessToken: refreshResult.accessToken,
-      refreshToken: refreshResult.refreshToken
+      refreshToken: refreshResult.refreshToken,
+      deviceFingerprint: tokens.deviceFingerprint
     });
 
     // Connect to WebSocket with fresh token
@@ -459,7 +465,9 @@ async function initializeCloudApi() {
     // Start token refresh
     cloudApiService.startTokenRefresh(async (newTokens) => {
       console.log('[Main] Cloud tokens refreshed');
-      await storeCloudTokens(cloudApiService.getBotId(), newTokens.accessToken, newTokens.refreshToken);
+      // Get current device fingerprint (should be same as stored)
+      const currentTokens = await getCloudTokens();
+      await storeCloudTokens(cloudApiService.getBotId(), newTokens.accessToken, newTokens.refreshToken, currentTokens.deviceFingerprint);
     });
 
     console.log('[Main] Cloud API initialization complete');
@@ -740,15 +748,19 @@ ipcMain.handle('activate-with-token', async (event, token) => {
 
     console.log('[Main] Activating bot with cloud API...');
 
-    // Call cloud API to activate bot
-    const result = await cloudApiService.activateBot(token);
+    // Generate device fingerprint for this machine
+    const deviceFingerprint = securityService.getDeviceFingerprint();
+    console.log('[Main] Device fingerprint generated:', deviceFingerprint.substring(0, 16) + '...');
+
+    // Call cloud API to activate bot with device fingerprint
+    const result = await cloudApiService.activateBot(token, deviceFingerprint);
 
     if (!result.success) {
       return { success: false, error: result.error };
     }
 
-    // Store cloud tokens in OS keychain
-    const stored = await storeCloudTokens(result.botId, result.accessToken, result.refreshToken);
+    // Store cloud tokens and device fingerprint in OS keychain
+    const stored = await storeCloudTokens(result.botId, result.accessToken, result.refreshToken, deviceFingerprint);
 
     if (!stored) {
       return { success: false, error: 'Failed to store credentials securely' };

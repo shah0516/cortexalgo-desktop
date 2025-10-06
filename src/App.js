@@ -18,6 +18,9 @@ function App() {
   // Cloud connection state
   const [cloudConnectionStatus, setCloudConnectionStatus] = useState('disconnected');
 
+  // App version
+  const [appVersion, setAppVersion] = useState('loading...');
+
   // Detect OS color scheme preference
   useEffect(() => {
     const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -96,6 +99,11 @@ function App() {
 
       window.electronAPI.getMasterKillSwitch().then((enabled) => {
         setMasterKillSwitch(enabled);
+      });
+
+      // Get app version
+      window.electronAPI.getAppVersion().then((version) => {
+        setAppVersion(version);
       });
     }
   }, []);
@@ -335,7 +343,7 @@ function App() {
       </div>
 
       <footer className="dashboard-footer">
-        <p>CortexAlgo v1.0.0 | Trading Platform</p>
+        <p>CortexAlgo v{appVersion} | Trading Platform | Auto-Update Active ✓</p>
       </footer>
     </div>
   );
