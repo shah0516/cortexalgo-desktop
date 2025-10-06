@@ -70,4 +70,32 @@ contextBridge.exposeInMainWorld('electronAPI', {
       callback(data);
     });
   },
+
+  // Auto-update controls
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  onUpdateAvailable: (callback) => {
+    ipcRenderer.on('update-available', (event, data) => {
+      callback(data);
+    });
+  },
+  onUpdateDownloading: (callback) => {
+    ipcRenderer.on('update-downloading', () => {
+      callback();
+    });
+  },
+  onUpdateProgress: (callback) => {
+    ipcRenderer.on('update-progress', (event, percent) => {
+      callback(percent);
+    });
+  },
+  onUpdateReady: (callback) => {
+    ipcRenderer.on('update-ready', () => {
+      callback();
+    });
+  },
+  onUpdateError: (callback) => {
+    ipcRenderer.on('update-error', (event, error) => {
+      callback(error);
+    });
+  },
 });

@@ -36,15 +36,15 @@ This will:
 ## Project Structure
 
 ```
-execution-agent-desktop/
+cortexalgo-desktop/
 ├── main.js              # Electron main process (background engine)
 ├── preload.js           # Secure IPC bridge
 ├── package.json         # Dependencies and scripts
+├── services/            # Backend services (TopstepX, Cloud API, etc.)
 ├── assets/              # Application icons
 ├── public/
 │   └── index.html       # HTML shell for React app
 └── src/
-    ├── index.js         # React entry point
     ├── App.js           # Main dashboard component
     └── App.css          # Dashboard styles
 ```

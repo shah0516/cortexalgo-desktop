@@ -5,12 +5,14 @@ const path = require('path');
 const fs = require('fs');
 const topstepClient = require('./services/topstepClient');
 const cloudApiService = require('./services/cloudApiService');
+const UpdateManager = require('./services/updateManager');
 const keytar = require('keytar');
 
 let tray = null;
 let mainWindow = null;
 let activationWindow = null;
 let apiKeyWindow = null;
+let updateManager = null;
 let currentPnl = 0;
 let topstepAccounts = [];
 let isTopstepInitialized = false;
@@ -683,6 +685,14 @@ app.whenReady().then(async () => {
 
     // Initialize Cloud API (WebSocket + telemetry)
     await initializeCloudApi();
+
+    // Initialize auto-updater (production only)
+    const isDev = process.env.NODE_ENV === 'development';
+    if (!isDev) {
+      updateManager = new UpdateManager(mainWindow);
+      updateManager.startAutoCheck();
+      console.log('[Main] Auto-updater initialized');
+    }
   }
 
   // This is for macOS behavior
@@ -801,6 +811,14 @@ ipcMain.handle('save-api-key', async (event, credentials) => {
 
       // Initialize Cloud API (WebSocket + telemetry)
       await initializeCloudApi();
+
+      // Initialize auto-updater (production only)
+      const isDev = process.env.NODE_ENV === 'development';
+      if (!isDev) {
+        updateManager = new UpdateManager(mainWindow);
+        updateManager.startAutoCheck();
+        console.log('[Main] Auto-updater initialized');
+      }
     }
 
     return { success: true };
@@ -875,4 +893,15 @@ ipcMain.handle('get-trading-status', async () => {
     return { masterEnabled: false, accounts: {} };
   }
   return topstepClient.getTradingStatus();
+});
+
+// --- Auto-Update IPC Handlers ---
+
+// Manual update check
+ipcMain.handle('check-for-updates', async () => {
+  if (updateManager) {
+    updateManager.checkForUpdates();
+    return { success: true };
+  }
+  return { success: false, error: 'Auto-updater not initialized' };
 });
