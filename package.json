@@ -15,7 +15,7 @@
     "trading",
     "desktop"
   ],
-  "author": "Your Name",
+  "author": "Mahboob shah Mohammed",
   "license": "ISC",
   "dependencies": {
     "@microsoft/signalr": "^9.0.6",
