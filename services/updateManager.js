@@ -22,6 +22,17 @@ autoUpdater.setFeedURL({
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = true;
 
+// BETA ONLY: Disable signature verification for unsigned/ad-hoc signed builds
+// This is required because ad-hoc signatures change with each build
+// TODO: Remove this and use proper Apple Developer code signing for production
+if (process.platform === 'darwin') {
+  const MacUpdater = autoUpdater.constructor;
+  Object.defineProperty(MacUpdater.prototype, 'verifyUpdateCodeSignature', {
+    get: () => false,
+    configurable: true
+  });
+}
+
 class UpdateManager {
   constructor(mainWindow) {
     this.mainWindow = mainWindow;
