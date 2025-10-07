@@ -22,6 +22,14 @@ autoUpdater.setFeedURL({
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = true;
 
+// BETA TESTING: Disable signature verification (no code signing yet)
+// This allows auto-updates to work without Apple Developer certificate
+// TODO: Remove this and implement proper code signing before production
+Object.defineProperty(autoUpdater, 'isUpdaterActive', {
+  get: () => true
+});
+process.env.ELECTRON_UPDATER_ALLOW_UNSIGNED = '1';
+
 class UpdateManager {
   constructor(mainWindow) {
     this.mainWindow = mainWindow;
