@@ -1,6 +1,6 @@
 {
   "name": "cortexalgo-desktop",
-  "version": "0.1.0-beta.14",
+  "version": "0.1.0-beta.15",
   "description": "CortexAlgo Desktop - Cloud-Hybrid Trading Platform",
   "main": "main.js",
   "scripts": {
@@ -49,10 +49,10 @@
       "config.js",
       "assets/**/*"
     ],
+    "afterSign": "scripts/afterSign.js",
     "mac": {
       "category": "public.app-category.finance",
       "identity": null,
-      "forceCodeSigning": false,
       "target": [
         {
           "target": "dmg",
