@@ -343,7 +343,7 @@ function App() {
       </div>
 
       <footer className="dashboard-footer">
-        <p>CortexAlgo v{appVersion} | Trading Platform | Auto-Update Active ✓</p>
+        <p>CortexAlgo v{appVersion} | Cloud-Hybrid Trading Platform</p>
       </footer>
     </div>
   );
