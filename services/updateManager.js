@@ -22,17 +22,11 @@ autoUpdater.setFeedURL({
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = true;
 
-// BETA TESTING: Disable signature verification (no code signing yet)
-// This allows auto-updates to work without Apple Developer certificate
-// TODO: Remove this and implement proper code signing before production
-Object.defineProperty(autoUpdater, 'isUpdaterActive', {
-  get: () => true
-});
-process.env.ELECTRON_UPDATER_ALLOW_UNSIGNED = '1';
-
 class UpdateManager {
   constructor(mainWindow) {
     this.mainWindow = mainWindow;
+    this.updatePromptShown = false; // Track if we've shown the prompt for current version
+    this.lastCheckedVersion = null; // Track which version we last prompted for
     this.setupListeners();
   }
 
@@ -46,6 +40,15 @@ class UpdateManager {
         version: info.version,
         releaseNotes: info.releaseNotes
       });
+
+      // Only show dialog once per version per session
+      if (this.updatePromptShown && this.lastCheckedVersion === info.version) {
+        log.info('Update dialog already shown for version', info.version, '- skipping');
+        return;
+      }
+
+      this.updatePromptShown = true;
+      this.lastCheckedVersion = info.version;
 
       // Show dialog to user
       dialog.showMessageBox(this.mainWindow, {
