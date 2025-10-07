@@ -274,6 +274,24 @@ async function connectWebSocket(token) {
         });
       });
 
+      // Trade directive received from cloud-engine
+      socket.on('trade_directive', async (data) => {
+        const { accountId, directive, timestamp } = data;
+
+        console.log('[CloudAPI] 📥 Trade directive received:', {
+          accountId,
+          action: directive.action,
+          symbol: directive.symbol,
+          price: directive.price,
+          timestamp
+        });
+
+        // Forward to main process for handling
+        if (eventHandlers.onTradeDirective) {
+          eventHandlers.onTradeDirective(data);
+        }
+      });
+
       // Heartbeat acknowledgment
       socket.on('heartbeat_ack', (data) => {
         console.log('[CloudAPI] Heartbeat acknowledged');

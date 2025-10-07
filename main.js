@@ -406,6 +406,10 @@ async function initializeCloudApi() {
         console.log('[Main] Cloud command received:', commandData);
         handleCloudCommand(commandData);
       },
+      onTradeDirective: (directiveData) => {
+        console.log('[Main] Trade directive received:', directiveData);
+        handleTradeDirective(directiveData);
+      },
       onConnectionStateChanged: (state) => {
         console.log('[Main] Cloud connection state:', state);
 
@@ -505,6 +509,103 @@ function handleCloudCommand(commandData) {
 
     default:
       console.warn('[Main] Unknown command from cloud:', command);
+  }
+}
+
+/**
+ * Handle trade directive from cloud engine
+ * @param {Object} directiveData - Trade directive data
+ */
+async function handleTradeDirective(directiveData) {
+  const { accountId, directive, timestamp } = directiveData;
+
+  console.log('[Main] 🎯 Processing trade directive:', {
+    accountId,
+    action: directive.action,
+    symbol: directive.symbol,
+    price: directive.price
+  });
+
+  // Check if TopstepX is initialized
+  if (!isTopstepInitialized) {
+    console.error('[Main] Cannot execute trade - TopstepX not initialized');
+    return;
+  }
+
+  // Check kill switches
+  const canTrade = topstepClient.canTrade(accountId);
+  if (!canTrade) {
+    console.warn('[Main] ❌ Trading disabled for account', accountId);
+
+    // Notify UI
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('signal-rejected', {
+        accountId,
+        directive,
+        reason: 'Kill switch enabled',
+        timestamp
+      });
+    }
+    return;
+  }
+
+  // Send signal to UI
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('signal-received', {
+      accountId,
+      directive,
+      timestamp
+    });
+  }
+
+  // Execute order
+  try {
+    const orderExecutionService = require('./services/orderExecutionService');
+
+    const result = await orderExecutionService.submitOrder({
+      accountId: accountId,
+      action: directive.action,
+      symbol: directive.symbol,
+      lots: directive.lots
+    });
+
+    if (result.success) {
+      console.log('[Main] ✅ Order submitted successfully:', result.orderId);
+
+      // Notify UI
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('order-submitted', {
+          accountId,
+          order: result,
+          directive,
+          timestamp
+        });
+      }
+    } else {
+      console.error('[Main] ❌ Order submission failed:', result.error);
+
+      // Notify UI
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('order-failed', {
+          accountId,
+          directive,
+          error: result.error,
+          timestamp
+        });
+      }
+    }
+  } catch (error) {
+    console.error('[Main] Exception during order execution:', error);
+
+    // Notify UI
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('order-failed', {
+        accountId,
+        directive,
+        error: error.message,
+        timestamp
+      });
+    }
   }
 }
 
