@@ -514,16 +514,21 @@ function handleCloudCommand(commandData) {
 
 /**
  * Handle trade directive from cloud engine
- * @param {Object} directiveData - Trade directive data
+ * @param {Object} directiveData - Trade directive data (flat structure from admin-API relay)
  */
 async function handleTradeDirective(directiveData) {
-  const { accountId, directive, timestamp } = directiveData;
+  const { directiveId, virtualBotId, strategyConfigId, physicalBotId, accountId: accountIdRaw, symbol, action, price, contracts, reason, timestamp } = directiveData;
+
+  // Parse accountId as integer (TopstepX uses numeric account IDs)
+  const accountId = parseInt(accountIdRaw, 10);
 
   console.log('[Main] 🎯 Processing trade directive:', {
+    directiveId,
     accountId,
-    action: directive.action,
-    symbol: directive.symbol,
-    price: directive.price
+    action,
+    symbol,
+    price,
+    contracts
   });
 
   // Check if TopstepX is initialized
@@ -540,8 +545,12 @@ async function handleTradeDirective(directiveData) {
     // Notify UI
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('signal-rejected', {
+        directiveId,
         accountId,
-        directive,
+        action,
+        symbol,
+        price,
+        contracts,
         reason: 'Kill switch enabled',
         timestamp
       });
@@ -552,8 +561,13 @@ async function handleTradeDirective(directiveData) {
   // Send signal to UI
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('signal-received', {
+      directiveId,
       accountId,
-      directive,
+      action,
+      symbol,
+      price,
+      contracts,
+      reason,
       timestamp
     });
   }
@@ -564,9 +578,9 @@ async function handleTradeDirective(directiveData) {
 
     const result = await orderExecutionService.submitOrder({
       accountId: accountId,
-      action: directive.action,
-      symbol: directive.symbol,
-      lots: directive.lots
+      action: action,
+      symbol: symbol,
+      lots: contracts
     });
 
     if (result.success) {
@@ -575,9 +589,13 @@ async function handleTradeDirective(directiveData) {
       // Notify UI
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('order-submitted', {
+          directiveId,
           accountId,
+          action,
+          symbol,
+          price,
+          contracts,
           order: result,
-          directive,
           timestamp
         });
       }
@@ -587,8 +605,12 @@ async function handleTradeDirective(directiveData) {
       // Notify UI
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('order-failed', {
+          directiveId,
           accountId,
-          directive,
+          action,
+          symbol,
+          price,
+          contracts,
           error: result.error,
           timestamp
         });
@@ -600,8 +622,12 @@ async function handleTradeDirective(directiveData) {
     // Notify UI
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('order-failed', {
+        directiveId,
         accountId,
-        directive,
+        action,
+        symbol,
+        price,
+        contracts,
         error: error.message,
         timestamp
       });

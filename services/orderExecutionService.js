@@ -21,7 +21,7 @@ const log = console;
 async function submitOrder({ accountId, action, symbol, lots }) {
   try {
     // Get valid TopstepX auth token
-    const token = await authService.getValidToken();
+    const token = await authService.getAccessToken();
 
     // Map action to TopstepX order side
     const side = mapActionToSide(action);
@@ -32,16 +32,22 @@ async function submitOrder({ accountId, action, symbol, lots }) {
 
     log.log(`📝 [OrderExecution] Submitting order: ${side} ${lots} ${symbol} for account ${accountId}`);
 
+    // Map symbol to TopstepX contract ID
+    const contractId = mapSymbolToContractId(symbol);
+
+    if (!contractId) {
+      throw new Error(`Unknown symbol: ${symbol}`);
+    }
+
     // Submit order to TopstepX API
     const response = await axios.post(
-      `${config.topstepx.apiBaseUrl}/Order/submit`,
+      `${config.API_ENDPOINT}/api/Order/place`,
       {
-        accountId: accountId,
-        symbol: symbol,
-        side: side,
-        quantity: lots,
-        orderType: 'MARKET',
-        timeInForce: 'DAY'
+        accountId: parseInt(accountId),
+        contractId: contractId,
+        side: side === 'BUY' ? 0 : 1, // 0 = Buy, 1 = Sell
+        type: 2, // 2 = Market order
+        size: lots
       },
       {
         headers: {
@@ -79,7 +85,11 @@ async function submitOrder({ accountId, action, symbol, lots }) {
       accountId,
       action,
       symbol,
-      lots
+      lots,
+      statusCode: error.response?.status,
+      responseData: error.response?.data,
+      validationErrors: error.response?.data?.errors ? JSON.stringify(error.response.data.errors, null, 2) : null,
+      endpoint: `${config.API_ENDPOINT}/api/Order/place`
     });
 
     // Return error details
@@ -87,6 +97,7 @@ async function submitOrder({ accountId, action, symbol, lots }) {
       success: false,
       error: error.message,
       errorDetails: error.response?.data || null,
+      statusCode: error.response?.status,
       accountId,
       action,
       symbol,
@@ -112,7 +123,24 @@ function mapActionToSide(action) {
   return actionMap[action] || null;
 }
 
+/**
+ * Map symbol to TopstepX contract ID
+ * @param {string} symbol - Instrument symbol (NQ, ES, etc.)
+ * @returns {string|null} TopstepX contract ID or null if unknown
+ */
+function mapSymbolToContractId(symbol) {
+  const symbolMap = {
+    'NQ': 'CON.F.US.ENQ.Z25', // NQ December 2025
+    'ES': 'CON.F.US.EP.Z25',  // ES December 2025
+    'YM': 'CON.F.US.YM.Z25',  // YM December 2025
+    'RTY': 'CON.F.US.RTY.Z25' // RTY December 2025
+  };
+
+  return symbolMap[symbol] || null;
+}
+
 module.exports = {
   submitOrder,
-  mapActionToSide
+  mapActionToSide,
+  mapSymbolToContractId
 };

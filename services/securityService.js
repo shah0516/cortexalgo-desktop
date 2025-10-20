@@ -42,7 +42,7 @@ function getDeviceFingerprint() {
  * @returns {Object} Signed request with signature, timestamp, and nonce
  */
 function signRequest(data, accessToken) {
-  const timestamp = Date.now();
+  const timestamp = new Date().toISOString();  // Use ISO 8601 format instead of Unix timestamp
   const nonce = crypto.randomBytes(16).toString('hex');
 
   // Create payload with timestamp and nonce

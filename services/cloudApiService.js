@@ -276,19 +276,29 @@ async function connectWebSocket(token) {
 
       // Trade directive received from cloud-engine
       socket.on('trade_directive', async (data) => {
-        const { accountId, directive, timestamp } = data;
+        const { directiveId, virtualBotId, strategyConfigId, physicalBotId, accountId, symbol, action, price, contracts, reason, timestamp } = data;
 
         console.log('[CloudAPI] 📥 Trade directive received:', {
+          directiveId,
           accountId,
-          action: directive.action,
-          symbol: directive.symbol,
-          price: directive.price,
+          action,
+          symbol,
+          price,
+          contracts,
           timestamp
         });
 
         // Forward to main process for handling
         if (eventHandlers.onTradeDirective) {
           eventHandlers.onTradeDirective(data);
+        }
+
+        // Send acknowledgment for RTT measurement
+        if (socket && isConnected) {
+          socket.emit('directive_ack', {
+            directiveId,
+            topstepLatencyMs: null // TODO: Add actual TopstepX execution latency when order execution is implemented
+          });
         }
       });
 
@@ -528,11 +538,10 @@ function startTokenRefresh(onTokenRefreshed) {
           });
         }
 
-        // Reconnect WebSocket with new token
-        if (socket && isConnected) {
-          disconnectWebSocket();
-          await connectWebSocket(accessToken);
-        }
+        // NOTE: WebSocket does NOT need to reconnect after token refresh
+        // Socket.IO only validates JWT during initial connection (auth middleware)
+        // The refreshed token is only needed for HTTP API calls (telemetry, etc.)
+        // Keeping the WebSocket connected avoids unnecessary disconnections
       } else {
         console.error('[CloudAPI] Token refresh failed. User may need to reactivate.');
       }
