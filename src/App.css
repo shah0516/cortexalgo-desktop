@@ -576,6 +576,192 @@ section {
   color: var(--text-primary);
 }
 
+/* ========== Account Detail View & Navigation ========== */
+
+/* Account Type Badge */
+.account-type-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-left: 8px;
+  margin-top: 4px;
+}
+
+.account-type-badge.evaluation {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.account-type-badge.funded {
+  background: #e8f5e8;
+  color: #2e7d32;
+}
+
+.account-type-badge.practice {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
+.account-type-badge.scaling {
+  background: #f3e5f5;
+  color: #7b1fa2;
+}
+
+/* Bot Status Text */
+.bot-status-text {
+  font-size: 0.9rem;
+}
+
+.bot-status-text.active {
+  color: var(--green);
+}
+
+.bot-status-text.paused {
+  color: #ff9500;
+}
+
+.bot-status-text.rule_halted {
+  color: var(--red);
+}
+
+/* Account Actions */
+.account-actions {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.detail-btn {
+  width: 100%;
+  padding: 8px 16px;
+  background: var(--blue);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.detail-btn:hover {
+  background: #0077ed;
+  transform: translateY(-1px);
+}
+
+/* View Controls */
+.view-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.view-mode {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+}
+
+.view-mode.active {
+  background: var(--blue);
+  color: white;
+}
+
+/* Detail Navigation */
+.detail-navigation {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  width: 100%;
+}
+
+.back-btn {
+  padding: 8px 16px;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.back-btn:hover {
+  background: var(--bg-secondary);
+  transform: translateY(-1px);
+}
+
+/* Account Tabs */
+.account-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  flex: 1;
+}
+
+.account-tab {
+  padding: 8px 16px;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  min-width: fit-content;
+}
+
+.account-tab:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.account-tab.active {
+  background: var(--blue);
+  color: white;
+  border-color: var(--blue);
+}
+
+/* Account Detail Container */
+.account-detail-container {
+  background: var(--bg-primary);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  margin-top: 16px;
+  overflow: hidden;
+  min-height: 600px;
+}
+
+/* Dark theme adjustments for new elements */
+.dashboard.dark .account-type-badge.evaluation {
+  background: #1e3a8a;
+  color: #93c5fd;
+}
+
+.dashboard.dark .account-type-badge.funded {
+  background: #14532d;
+  color: #86efac;
+}
+
+.dashboard.dark .account-type-badge.practice {
+  background: #7c2d12;
+  color: #fed7aa;
+}
+
+.dashboard.dark .account-type-badge.scaling {
+  background: #581c87;
+  color: #d8b4fe;
+}
+
 /* ========== Responsive Design ========== */
 @media (max-width: 768px) {
   .dashboard-content {

@@ -4,6 +4,7 @@
 const authService = require('./authService');
 const signalRService = require('./signalRService');
 const accountManager = require('./accountManager');
+const mockAccountsService = require('../dev/mockAccountsService');
 
 let isInitialized = false;
 let eventCallbacks = {
@@ -14,14 +15,26 @@ let eventCallbacks = {
 };
 
 /**
- * Initialize TopstepX client
- * @param {object} credentials - {username, apiKey}
+ * Initialize TopstepX client with optional development mode
+ * @param {object} credentials - {username, apiKey} or 'MOCK' for development
  * @param {object} callbacks - Event callback functions
+ * @param {boolean} developmentMode - Use mock data instead of real API calls
  */
-async function initialize(credentials, callbacks = {}) {
+async function initialize(credentials, callbacks = {}, developmentMode = false) {
   if (isInitialized) {
     console.warn('[TopstepClient] Already initialized');
     return;
+  }
+
+  // Check if using mock credentials for development
+  console.log('[TopstepClient] DEBUG: credentials =', credentials, 'developmentMode =', developmentMode);
+  
+  if (credentials === 'MOCK' || developmentMode || 
+      (credentials && credentials.username === 'dev_user@cortexalgo.com')) {
+    isDevelopmentMode = true;
+    console.log('[TopstepClient] 🚧 DEVELOPMENT MODE - Using mock data');
+  } else {
+    console.log('[TopstepClient] Production mode detected');
   }
 
   console.log('[TopstepClient] Initializing...');
@@ -30,22 +43,38 @@ async function initialize(credentials, callbacks = {}) {
   eventCallbacks = { ...eventCallbacks, ...callbacks };
 
   try {
-    // Initialize auth service with credentials
-    authService.initialize(credentials);
+    let accounts;
+    
+    if (isDevelopmentMode) {
+      // === DEVELOPMENT MODE ===
+      console.log('[TopstepClient] Using mock authentication and accounts...');
+      
+      // Mock authentication
+      await mockAccountsService.mockAuthenticate();
+      
+      // Get mock accounts
+      accounts = mockAccountsService.generateMockAccounts();
+      
+      console.log(`[TopstepClient] Mock accounts generated: ${accounts.length}`);
+    } else {
+      // === PRODUCTION MODE ===
+      // Initialize auth service with credentials
+      authService.initialize(credentials);
 
-    // Authenticate and get token
-    console.log('[TopstepClient] Authenticating...');
-    const token = await authService.getAccessToken();
+      // Authenticate and get token
+      console.log('[TopstepClient] Authenticating...');
+      const token = await authService.getAccessToken();
 
-    // Fetch active accounts
-    console.log('[TopstepClient] Fetching accounts...');
-    const accounts = await authService.getActiveAccounts(token);
+      // Fetch active accounts
+      console.log('[TopstepClient] Fetching accounts...');
+      accounts = await authService.getActiveAccounts(token);
 
-    if (!accounts || accounts.length === 0) {
-      throw new Error('No active accounts found');
+      if (!accounts || accounts.length === 0) {
+        throw new Error('No active accounts found');
+      }
     }
 
-    // Initialize account manager with fetched accounts
+    // Initialize account manager with accounts (mock or real)
     accountManager.initializeAccounts(accounts);
 
     // Enable master kill switch by default
@@ -56,30 +85,49 @@ async function initialize(credentials, callbacks = {}) {
       eventCallbacks.onAccountsLoaded(accountManager.getAllAccounts());
     }
 
-    // Build and start User Hub connection
-    console.log('[TopstepClient] Connecting to User Hub...');
-    const userHub = signalRService.buildUserHubConnection(token);
-
-    // Register SignalR event handlers
-    signalRService.registerEventHandlers(userHub, {
-      onFill: handleFill,
-      onAccountUpdate: handleAccountUpdate,
-      onPositionUpdate: handlePositionUpdate,
-      onOrderUpdate: handleOrderUpdate
-    });
-
-    // Start connection
-    const connected = await signalRService.startConnection(userHub);
-
-    if (connected) {
-      console.log('[TopstepClient] Successfully connected to TopstepX User Hub');
+    if (isDevelopmentMode) {
+      // === DEVELOPMENT MODE - Mock SignalR ===
+      console.log('[TopstepClient] Starting mock live data updates...');
+      
+      // Start mock live updates
+      mockUpdateCleanup = mockAccountsService.startMockLiveUpdates(
+        handleAccountUpdate,
+        handleFill,
+        accounts
+      );
+      
+      // Simulate connection success
       if (eventCallbacks.onConnectionStateChanged) {
         eventCallbacks.onConnectionStateChanged('connected');
       }
     } else {
-      console.warn('[TopstepClient] Failed to connect to User Hub, but will auto-retry');
-      if (eventCallbacks.onConnectionStateChanged) {
-        eventCallbacks.onConnectionStateChanged('disconnected');
+      // === PRODUCTION MODE - Real SignalR ===
+      // Build and start User Hub connection
+      console.log('[TopstepClient] Connecting to User Hub...');
+      const token = await authService.getAccessToken(); // Get token again
+      const userHub = signalRService.buildUserHubConnection(token);
+
+      // Register SignalR event handlers
+      signalRService.registerEventHandlers(userHub, {
+        onFill: handleFill,
+        onAccountUpdate: handleAccountUpdate,
+        onPositionUpdate: handlePositionUpdate,
+        onOrderUpdate: handleOrderUpdate
+      });
+
+      // Start connection
+      const connected = await signalRService.startConnection(userHub);
+
+      if (connected) {
+        console.log('[TopstepClient] Successfully connected to TopstepX User Hub');
+        if (eventCallbacks.onConnectionStateChanged) {
+          eventCallbacks.onConnectionStateChanged('connected');
+        }
+      } else {
+        console.warn('[TopstepClient] Failed to connect to User Hub, but will auto-retry');
+        if (eventCallbacks.onConnectionStateChanged) {
+          eventCallbacks.onConnectionStateChanged('disconnected');
+        }
       }
     }
 

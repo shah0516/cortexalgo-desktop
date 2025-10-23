@@ -1,6 +1,9 @@
 // src/App.js - Main React Component (Dashboard UI)
 const { useState, useEffect } = React;
 
+// Import AccountDetailView component
+// Note: Component is loaded via script tag in HTML
+
 function App() {
   const [pnl, setPnl] = useState(0);
   const [pnlChange, setPnlChange] = useState(0);
@@ -14,6 +17,10 @@ function App() {
   const [accounts, setAccounts] = useState([]);
   const [masterKillSwitch, setMasterKillSwitch] = useState(false);
   const [fills, setFills] = useState([]);
+
+  // Account Detail View state
+  const [selectedAccountId, setSelectedAccountId] = useState(null);
+  const [viewMode, setViewMode] = useState('overview'); // 'overview' or 'detail'
 
   // Cloud connection state
   const [cloudConnectionStatus, setCloudConnectionStatus] = useState('disconnected');
@@ -180,6 +187,44 @@ function App() {
     }
   };
 
+  // Account Detail View handlers
+  const handleAccountSelect = (accountId) => {
+    setSelectedAccountId(accountId);
+    setViewMode('detail');
+  };
+
+  const handleBackToOverview = () => {
+    setSelectedAccountId(null);
+    setViewMode('overview');
+  };
+
+  const handleFlattenPositions = async (accountId) => {
+    // TODO: Implement flatten positions functionality
+    console.log(`Flattening positions for account ${accountId}`);
+    // This would call the electron API to flatten all positions
+    // const result = await window.electronAPI.flattenAccountPositions(accountId);
+  };
+
+  const handleRefreshAccount = async (accountId) => {
+    // TODO: Implement refresh account functionality
+    console.log(`Refreshing account ${accountId}`);
+    // This would call the electron API to refresh account data
+    // const result = await window.electronAPI.refreshAccountData(accountId);
+  };
+
+  const handleToggleBot = async (accountId, currentStatus) => {
+    // TODO: Implement bot toggle functionality
+    const newStatus = currentStatus === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
+    console.log(`Toggling bot for account ${accountId} from ${currentStatus} to ${newStatus}`);
+    // This would call the electron API to start/stop the bot
+    // const result = await window.electronAPI.toggleBot(accountId, newStatus);
+  };
+
+  // Get selected account
+  const selectedAccount = selectedAccountId 
+    ? accounts.find(account => account.id === selectedAccountId)
+    : null;
+
   return (
     <div className={`dashboard ${theme}`}>
       <header className="dashboard-header">
@@ -204,44 +249,104 @@ function App() {
         {/* TopstepX Accounts */}
         {accounts.length > 0 && (
           <section className="accounts-section">
-            <div className="section-header">
-              <h2>TopstepX Accounts ({accounts.length})</h2>
-            </div>
-            <div className="accounts-grid">
-              {accounts.map((account) => (
-                <div key={account.id} className="account-card">
-                  <div className="account-header">
-                    <div className="account-info">
-                      <h3>{account.name || `Account ${account.id}`}</h3>
-                      <span className="account-id">ID: {account.id}</span>
-                    </div>
-                    <button
-                      className={`account-toggle ${account.tradingEnabled ? 'enabled' : 'disabled'}`}
-                      onClick={() => handleAccountTradingToggle(account.id)}
-                      disabled={!masterKillSwitch}
-                    >
-                      {account.tradingEnabled ? 'Trading ON' : 'Trading OFF'}
-                    </button>
+            {viewMode === 'overview' ? (
+              <>
+                <div className="section-header">
+                  <h2>TopstepX Accounts ({accounts.length})</h2>
+                  <div className="view-controls">
+                    <span className="view-mode active">Overview</span>
                   </div>
-                  <div className="account-stats">
-                    <div className="stat">
-                      <label>Balance</label>
-                      <span>{formatCurrency(account.balance || 0)}</span>
+                </div>
+                <div className="accounts-grid">
+                  {accounts.map((account) => (
+                    <div key={account.id} className="account-card">
+                      <div className="account-header">
+                        <div className="account-info">
+                          <h3>{account.name || `Account ${account.id}`}</h3>
+                          <span className="account-id">ID: {account.id}</span>
+                          <span className={`account-type-badge ${(account.accountType || '').toLowerCase()}`}>
+                            {account.accountType}
+                          </span>
+                        </div>
+                        <button
+                          className={`account-toggle ${account.tradingEnabled ? 'enabled' : 'disabled'}`}
+                          onClick={() => handleAccountTradingToggle(account.id)}
+                          disabled={!masterKillSwitch}
+                        >
+                          {account.tradingEnabled ? 'Trading ON' : 'Trading OFF'}
+                        </button>
+                      </div>
+                      <div className="account-stats">
+                        <div className="stat">
+                          <label>Balance</label>
+                          <span>{formatCurrency(account.currentBalance || account.balance || 0)}</span>
+                        </div>
+                        <div className="stat">
+                          <label>Daily PNL</label>
+                          <span className={account.dailyPnl >= 0 ? 'positive' : 'negative'}>
+                            {formatCurrency(account.dailyPnl || 0)}
+                          </span>
+                        </div>
+                        <div className="stat">
+                          <label>Positions</label>
+                          <span>{(account.openPositions || []).length}</span>
+                        </div>
+                        <div className="stat">
+                          <label>Bot Status</label>
+                          <span className={`bot-status-text ${(account.botStatus || '').toLowerCase()}`}>
+                            {account.botStatus === 'ACTIVE' ? '🟢 Active' : 
+                             account.botStatus === 'PAUSED' ? '🟡 Paused' : 
+                             account.botStatus === 'RULE_HALTED' ? '🔴 Halted' : '⚫ Inactive'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="account-actions">
+                        <button 
+                          className="detail-btn"
+                          onClick={() => handleAccountSelect(account.id)}
+                        >
+                          📊 View Details
+                        </button>
+                      </div>
                     </div>
-                    <div className="stat">
-                      <label>PNL</label>
-                      <span className={account.pnl >= 0 ? 'positive' : 'negative'}>
-                        {formatCurrency(account.pnl || 0)}
-                      </span>
-                    </div>
-                    <div className="stat">
-                      <label>Positions</label>
-                      <span>{(account.openPositions || []).length}</span>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="section-header">
+                  <div className="detail-navigation">
+                    <button 
+                      className="back-btn"
+                      onClick={handleBackToOverview}
+                    >
+                      ← Back to Overview
+                    </button>
+                    <div className="account-tabs">
+                      {accounts.map((account) => (
+                        <button
+                          key={account.id}
+                          className={`account-tab ${selectedAccountId === account.id ? 'active' : ''}`}
+                          onClick={() => handleAccountSelect(account.id)}
+                        >
+                          {account.name || `Account ${account.id}`}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
+                <div className="account-detail-container">
+                  {selectedAccount && window.AccountDetailView && (
+                    React.createElement(window.AccountDetailView, {
+                      account: selectedAccount,
+                      onFlattenPositions: handleFlattenPositions,
+                      onRefreshAccount: handleRefreshAccount,
+                      onToggleBot: handleToggleBot
+                    })
+                  )}
+                </div>
+              </>
+            )}
           </section>
         )}
 

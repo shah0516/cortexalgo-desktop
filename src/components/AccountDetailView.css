@@ -1,0 +1,597 @@
+/* src/components/AccountDetailView.css */
+/* Account Detail View Styles */
+
+.account-detail-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  overflow-y: auto;
+}
+
+.account-detail-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* Header */
+.account-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.account-title h2 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.account-id {
+  display: inline-block;
+  margin-right: 12px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.account-type {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.account-type.evaluation {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.account-type.funded {
+  background: #e8f5e8;
+  color: #2e7d32;
+}
+
+.account-type.practice {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
+.account-type.scaling {
+  background: #f3e5f5;
+  color: #7b1fa2;
+}
+
+.account-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.action-btn {
+  padding: 8px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.action-btn:hover {
+  background: var(--bg-tertiary);
+  transform: translateY(-1px);
+}
+
+.refresh-btn {
+  background: #0a84ff;
+  color: white;
+  border: none;
+}
+
+.refresh-btn:hover {
+  background: #0077ed;
+}
+
+/* Content */
+.account-detail-content {
+  padding: 24px;
+  flex: 1;
+}
+
+/* Summary Panel */
+.summary-panel {
+  margin-bottom: 32px;
+}
+
+.summary-panel h3 {
+  margin: 0 0 20px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.summary-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.summary-card h4 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Balance Card */
+.balance-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.balance-row:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.balance-row .value {
+  font-weight: 600;
+  font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+}
+
+.balance-row .value.positive {
+  color: #34c759;
+}
+
+.balance-row .value.negative {
+  color: #ff3b30;
+}
+
+/* Progress Bars */
+.progress-item {
+  margin-bottom: 20px;
+}
+
+.progress-item:last-child {
+  margin-bottom: 0;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.progress-header .value {
+  font-weight: 600;
+  font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+}
+
+.progress-bar {
+  height: 8px;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.drawdown-fill {
+  background: linear-gradient(90deg, #ff9500, #ff3b30);
+}
+
+.loss-fill {
+  background: linear-gradient(90deg, #ff9500, #ff3b30);
+}
+
+.profit-fill {
+  background: linear-gradient(90deg, #30d158, #34c759);
+}
+
+.progress-details {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* EOD Card */
+.eod-info {
+  text-align: center;
+}
+
+.countdown-display {
+  margin-bottom: 16px;
+}
+
+.countdown-time {
+  display: block;
+  font-size: 28px;
+  font-weight: 700;
+  font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+  color: #ff9500;
+  margin-bottom: 4px;
+}
+
+.countdown-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-indicator {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-indicator.open {
+  background: #e8f5e8;
+  color: #2e7d32;
+}
+
+.status-indicator.closed {
+  background: #ffebee;
+  color: #c62828;
+}
+
+/* Bot Panel */
+.bot-panel {
+  margin-bottom: 32px;
+}
+
+.bot-panel h3 {
+  margin: 0 0 20px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.bot-content {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.bot-status-section {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.bot-status-display {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.bot-status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.bot-status-active .status-dot {
+  background: #34c759;
+  box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.3);
+}
+
+.bot-status-paused .status-dot {
+  background: #ff9500;
+  box-shadow: 0 0 0 3px rgba(255, 149, 0, 0.3);
+}
+
+.bot-status-halted .status-dot {
+  background: #ff3b30;
+  box-shadow: 0 0 0 3px rgba(255, 59, 48, 0.3);
+}
+
+.bot-status-inactive .status-dot {
+  background: #8e8e93;
+}
+
+.bot-mode {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.bot-pause-reason {
+  font-size: 14px;
+  color: #ff9500;
+  font-weight: 500;
+}
+
+.bot-last-action {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.bot-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.control-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.control-btn {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 140px;
+}
+
+.control-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.start-btn {
+  background: #34c759;
+  color: white;
+}
+
+.start-btn:hover:not(:disabled) {
+  background: #30d158;
+  transform: translateY(-1px);
+}
+
+.stop-btn {
+  background: #ff9500;
+  color: white;
+}
+
+.stop-btn:hover:not(:disabled) {
+  background: #ff8c00;
+  transform: translateY(-1px);
+}
+
+.flatten-btn {
+  background: #007aff;
+  color: white;
+}
+
+.flatten-btn:hover:not(:disabled) {
+  background: #0056cc;
+  transform: translateY(-1px);
+}
+
+.rule-halt-notice {
+  background: #fff5f5;
+  border: 1px solid #fed7d7;
+  border-radius: 8px;
+  padding: 16px;
+  color: #c53030;
+}
+
+.rule-halt-notice p {
+  margin: 0 0 8px 0;
+}
+
+.rule-halt-notice p:last-child {
+  margin-bottom: 0;
+}
+
+/* Tables */
+.positions-panel,
+.fills-panel {
+  margin-bottom: 32px;
+}
+
+.positions-panel h3,
+.fills-panel h3 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.positions-table,
+.fills-table {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.table-header,
+.table-row {
+  display: grid;
+  grid-template-columns: 1fr 80px 80px 100px 100px 120px 100px;
+  gap: 16px;
+  padding: 12px 16px;
+  align-items: center;
+}
+
+.fills-table .table-header,
+.fills-table .table-row {
+  grid-template-columns: 1fr 80px 80px 100px 120px 100px;
+}
+
+.table-header {
+  background: var(--bg-tertiary);
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.table-row {
+  border-bottom: 1px solid var(--border-light);
+  transition: background-color 0.2s;
+}
+
+.table-row:last-child {
+  border-bottom: none;
+}
+
+.table-row:hover {
+  background: var(--bg-tertiary);
+}
+
+.table-row .symbol {
+  font-weight: 600;
+  font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+}
+
+.table-row .side {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.table-row .side.long {
+  color: #34c759;
+}
+
+.table-row .side.short {
+  color: #ff3b30;
+}
+
+.table-row .side.buy {
+  color: #34c759;
+}
+
+.table-row .side.sell {
+  color: #ff3b30;
+}
+
+.table-row .price,
+.table-row .pnl {
+  font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+}
+
+.table-row .pnl.positive {
+  color: #34c759;
+}
+
+.table-row .pnl.negative {
+  color: #ff3b30;
+}
+
+.table-row .time {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .control-buttons {
+    flex-direction: column;
+  }
+  
+  .control-btn {
+    min-width: auto;
+    text-align: center;
+  }
+  
+  .table-header,
+  .table-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .table-header span,
+  .table-row span {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+  }
+  
+  .table-header span::before,
+  .table-row span::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .account-type.evaluation {
+    background: #1e3a8a;
+    color: #93c5fd;
+  }
+  
+  .account-type.funded {
+    background: #14532d;
+    color: #86efac;
+  }
+  
+  .account-type.practice {
+    background: #7c2d12;
+    color: #fed7aa;
+  }
+  
+  .account-type.scaling {
+    background: #581c87;
+    color: #d8b4fe;
+  }
+  
+  .rule-halt-notice {
+    background: #7f1d1d;
+    border-color: #dc2626;
+    color: #fca5a5;
+  }
+}
