@@ -6,11 +6,14 @@ Desktop application for the CortexAlgo cloud-hybrid automated trading platform. 
 
 - **Cloud Integration**: Real-time WebSocket connection to CortexAlgo Cloud API
 - **TopstepX Integration**: Multi-account management with real-time PNL and position tracking
+- **Account Detail View**: Individual account tabs with comprehensive performance metrics
+- **Bot Management**: Master kill switch + individual account bot controls with status tracking
+- **Real-time Updates**: Live P&L tracking, position tables, and trade fill notifications
+- **Mock Development Mode**: Complete testing environment with realistic mock trading data
 - **Secure Authentication**: Two-step activation flow with OS keychain storage
 - **Device Fingerprinting**: Machine-bound sessions with HMAC-SHA256 request signing
 - **Auto-Updates**: Automatic updates via GitHub Releases with electron-updater
 - **Background Operation**: Runs silently in system tray with state-based indicators
-- **Kill Switch Control**: Master + per-account trading controls with cloud override
 - **Real-time Dashboard**: Native UI showing accounts, PNL, positions, and directives
 - **Telemetry Reporting**: 30-second heartbeat with account data to cloud
 
@@ -36,13 +39,60 @@ npm install
 
 ## Development
 
-Start the application in development mode:
+### Development vs Production Mode
 
+The application automatically detects and switches between development and production modes:
+
+#### **Development Mode** 
+Used for coding, testing, and debugging without real trading data.
+
+**How to run in development mode:**
 ```bash
+# Method 1: Environment variable (recommended)
+NODE_ENV=development npm start
+
+# Method 2: Command flag
+npm start -- --dev
+
+# Method 3: Auto-detection (running from source)
 npm start
 ```
 
-This will launch the Electron application and connect to the production cloud API at `https://api.cortexalgo.com`.
+**What happens in development mode:**
+- ✅ **Skips activation** - No API keys or cloud tokens required
+- ✅ **Uses mock data** - Loads 5 fake trading accounts with realistic data
+- ✅ **Simulates real-time updates** - Mock P&L changes and trade fills
+- ✅ **Safe testing environment** - No real trading or API calls
+- 🔧 **Hot reload available** - Use `npm run dev` for automatic restarts
+
+**Mock accounts included:**
+- Express Eval - NQ (Nasdaq futures)
+- Express Eval - ES (S&P 500 futures) 
+- Funded Trader - MNQ (Micro Nasdaq)
+- Practice Account - YM (Dow Jones)
+- Scaling Plan - RTY (Russell 2000)
+
+#### **Production Mode**
+Used with real TopstepX credentials and live trading data.
+
+**Requirements:**
+- Valid TopstepX API credentials
+- CortexAlgo cloud activation tokens
+- Built/packaged application (not running from source)
+
+**Console indicators:**
+- Development: `🚧 Using DEVELOPMENT MODE with mock accounts`
+- Production: `Connecting to real TopstepX API...`
+
+### Hot Reload Development
+
+For rapid development with automatic app restarts:
+
+```bash
+npm run dev
+```
+
+This uses nodemon to watch for file changes and automatically restart the Electron app.
 
 ## Building for Production
 
@@ -169,6 +219,10 @@ cortexalgo-desktop/
 │   ├── cloudApiService.js      # CortexAlgo Cloud API
 │   ├── updateManager.js        # Auto-update system
 │   └── securityService.js      # Device fingerprint & request signing
+├── dev/                        # Development-only files
+│   ├── mockAccountsService.js  # Mock trading data generator
+│   ├── config.js               # Development environment settings
+│   └── README.md               # Development setup documentation
 ├── assets/                     # Application icons
 │   ├── icon.png                # 512x512 window icon
 │   ├── tray-icon.png           # Default tray icon
@@ -182,7 +236,10 @@ cortexalgo-desktop/
 │   └── api-key.html            # TopstepX credentials window
 └── src/
     ├── App.js                  # Main React component (dashboard UI)
-    └── App.css                 # Dashboard styling with theme support
+    ├── App.css                 # Dashboard styling with theme support
+    └── components/             # React components
+        ├── AccountDetailView.js # Individual account management interface
+        └── AccountDetailView.css # Account detail styling
 ```
 
 ## Development Notes

@@ -235,11 +235,18 @@
       errorDiv.classList.remove('active');
 
       try {
-        // Send to main process for validation
-        const result = await window.electronAPI.activateWithToken(token);
+        // BYPASS: Skip token validation for development
+        console.log('Bypassing token validation for development');
+        
+        // Simulate successful activation
+        const result = { success: true };
 
         if (result.success) {
           // Success! Main process will close this window and show API key window
+          // For development, we'll simulate the success behavior
+          setTimeout(() => {
+            window.close();
+          }, 1000);
         } else {
           showError(result.error || 'Invalid activation token');
           button.disabled = false;

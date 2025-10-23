@@ -27,6 +27,15 @@ const CLOUD_BOT_ID_ACCOUNT = 'cloud_bot_id';
 const CLOUD_DEVICE_FINGERPRINT_ACCOUNT = 'cloud_device_fingerprint';
 const CREDENTIALS_FILE = path.join(app.getPath('userData'), 'topstepx_credentials.enc');
 
+// ========== Environment Detection ==========
+
+// Determine if we're running in development mode
+function isDevelopmentMode() {
+  return process.env.NODE_ENV === 'development' || 
+         process.argv.includes('--dev') ||
+         !app.isPackaged;
+}
+
 // Application State Management
 const APP_STATES = {
   CONNECTING: 'connecting',
@@ -133,6 +142,13 @@ function deleteTopstepXCredentials() {
 async function isActivated() {
   const cloudTokens = await getCloudTokens();
   const credentials = getTopstepXCredentials();
+  
+  // For development mode, skip activation requirement
+  if (isDevelopmentMode()) {
+    console.log('[Main] 🚧 Development mode: Skipping activation requirement');
+    return true;
+  }
+  
   return cloudTokens !== null && credentials !== null && credentials.username && credentials.apiKey;
 }
 
@@ -642,9 +658,17 @@ async function initializeTopstepX() {
 
   try {
     // Get stored credentials
-    const credentials = getTopstepXCredentials();
+    let credentials = getTopstepXCredentials();
+    const developmentMode = isDevelopmentMode();
 
-    if (!credentials) {
+    // Check for development mode conditions
+    if (developmentMode && !credentials) {
+      console.log('[Main] 🚧 Using DEVELOPMENT MODE with mock accounts');
+      credentials = 'MOCK'; // Special flag for mock mode
+    } else if (credentials && credentials.username === 'dev_user@cortexalgo.com') {
+      console.log('[Main] 🚧 Using DEVELOPMENT MODE with mock accounts (dev credentials detected)');
+      credentials = 'MOCK';
+    } else if (!credentials) {
       console.error('[Main] No TopstepX credentials found');
       setState(APP_STATES.WARNING);
       return false;
@@ -652,7 +676,7 @@ async function initializeTopstepX() {
 
     setState(APP_STATES.CONNECTING);
 
-    // Initialize TopstepX client with callbacks
+    // Initialize TopstepX client with callbacks and development mode flag
     await topstepClient.initialize(credentials, {
       onAccountsLoaded: (accounts) => {
         console.log(`[Main] TopstepX accounts loaded: ${accounts.length}`);
@@ -707,7 +731,7 @@ async function initializeTopstepX() {
           setState(APP_STATES.WARNING);
         }
       }
-    });
+    }, developmentMode);
 
     console.log('[Main] TopstepX initialization complete');
     return true;
